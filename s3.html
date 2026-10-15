@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI 맞춤 주식 추천</title>
+<style>
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Pretendard','Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;
+     background:#EEF1F7;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:16px}
+.st{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;clip:rect(0 0 0 0);overflow:hidden}
+
+#app{width:390px;max-width:100%;height:844px;max-height:100vh;background:#fff;border-radius:34px;
+     box-shadow:0 18px 50px rgba(36,52,132,.14);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.pg{display:none;flex-direction:column;height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch}
+
+/* ── 헤더 ── */
+.hd{background:#243484;padding:34px 22px 24px;flex-shrink:0}
+.hd-eye{font-size:11px;color:rgba(255,255,255,.6);letter-spacing:.14em;font-weight:700;margin-bottom:11px}
+.hd-ttl{font-size:23px;font-weight:800;color:#fff;line-height:1.42;letter-spacing:-.035em}
+.hd-sub{font-size:12.5px;font-weight:500;color:rgba(255,255,255,.55);margin-top:10px;line-height:1.6}
+.back{display:inline-flex;align-items:center;gap:5px;color:rgba(255,255,255,.75);font-size:12px;
+      margin-bottom:14px;cursor:pointer}
+.back b{font-size:17px;line-height:1;font-weight:400}
+
+/* ── 조건 입력 ── */
+.body{padding:22px 18px 34px;display:flex;flex-direction:column;gap:24px}
+.sec-h{display:flex;align-items:baseline;gap:8px}
+.sec-num{font-size:10.5px;font-weight:700;color:#C2C8DA;letter-spacing:.1em}
+.sec-ttl{font-size:18.5px;font-weight:600;color:#1A1F36;letter-spacing:-.02em}
+.sec-desc{font-size:11.5px;font-weight:500;color:#9AA2BC;margin:6px 0 13px}
+
+.olist{display:flex;flex-direction:column;gap:6px}
+.opt{display:flex;flex-direction:column;justify-content:center;min-height:56px;padding:12px 16px;
+     border:1px solid transparent;border-radius:12px;background:#F5F7FC;cursor:pointer;transition:.15s}
+.opt-t{font-size:13.5px;font-weight:800;color:#5B6484;letter-spacing:-.01em}
+.opt-s{font-size:10.5px;font-weight:500;color:#A3ABC2;margin-top:3px;line-height:1.45}
+.ogrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.ogrid .opt{min-height:50px;align-items:center;text-align:center}
+.orow{display:flex;flex-wrap:wrap;gap:7px}
+.chip{font-size:12px;font-weight:700;padding:10px 15px;border-radius:9px;background:#F5F7FC;
+      color:#5B6484;border:1px solid transparent;cursor:pointer;min-height:40px;
+      display:inline-flex;align-items:center;transition:.15s}
+.memo{width:100%;border:1px solid #E4E8F4;border-radius:10px;padding:12px 14px;font-size:16px;
+      font-weight:500;font-family:inherit;color:#1A1F36;background:#fff;outline:none;margin-bottom:9px}
+
+.cta{display:flex;align-items:center;justify-content:center;width:100%;padding:17px;border-radius:12px;
+     background:#243484;color:#fff;font-size:14.5px;font-weight:800;cursor:pointer;margin-top:2px}
+.note{display:flex;flex-direction:column;gap:10px;background:#F5F7FC;border:1px solid #E4E8F4;
+      border-radius:12px;padding:14px;margin-top:16px}
+.note-l{display:flex;gap:9px;align-items:flex-start}
+.badge{flex-shrink:0;width:36px;text-align:center;font-size:9px;font-weight:700;color:#243484;
+       background:#fff;border:1px solid #E4E8F4;border-radius:5px;padding:4px 0;margin-top:1px}
+.badge.rk{color:#C23A4B;border-color:#F0D6DB}
+.note-t{font-size:11px;color:#646D8C;line-height:1.75}
+.note-t b{color:#1A1F36;font-weight:800}
+
+/* ── 추천 결과 ── */
+.tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:13px}
+.tag{font-size:9.5px;padding:4px 9px;border-radius:6px;background:rgba(255,255,255,.1);
+     color:rgba(255,255,255,.82);border:1px solid rgba(255,255,255,.14)}
+.shd{padding:20px 18px 11px;display:flex;align-items:center;justify-content:space-between}
+.shd-t{font-size:15px;font-weight:800;color:#1A1F36}
+.shd-b{font-size:10px;font-weight:800;color:#243484;background:#EEF1FA;padding:4px 9px;border-radius:6px}
+.cards{padding:0 16px;display:flex;flex-direction:column;gap:9px}
+.card{display:block;background:#fff;border:1px solid #E4E8F4;border-radius:14px;padding:14px;cursor:pointer}
+.c-top{display:flex;align-items:flex-start;gap:12px}
+.c-mid{flex:1;min-width:0}
+.rank{display:inline-block;padding:3px 8px;border-radius:6px;font-size:9.5px;font-weight:700;
+      color:#fff;margin-bottom:7px}
+.c-name{font-size:20px;font-weight:800;color:#1A1F36;letter-spacing:-.03em;line-height:1.2}
+.c-code{font-size:10.5px;font-weight:500;color:#A3ABC2;margin-top:5px}
+.c-why{font-size:11px;font-weight:500;color:#646D8C;line-height:1.5;margin-top:8px}
+.c-rt{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+.c-ret{font-size:18px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.c-star{font-size:11px;color:#2563EB;letter-spacing:.6px}
+.pos{color:#2563EB}.neg{color:#C23A4B}
+.c-foot{margin-top:12px}
+.mtx{font-size:10px;font-weight:700;color:#4C5BA8;margin-bottom:6px}
+.mbar{height:4px;border-radius:2px;background:#EEF1FA;overflow:hidden}
+.mfill{height:100%;border-radius:2px;background:#243484}
+.list{padding:0 16px 30px;display:flex;flex-direction:column;gap:8px}
+.li{display:flex;align-items:flex-start;gap:12px;background:#fff;border:1px solid #E4E8F4;
+    border-radius:14px;padding:14px;cursor:pointer}
+.li-i{flex:1;min-width:0}
+.li-n{font-size:18px;font-weight:800;color:#1A1F36;letter-spacing:-.03em;line-height:1.2}
+.li-s{font-size:10.5px;font-weight:500;color:#A3ABC2;margin-top:5px}
+.li-w{display:inline-block;font-size:10.5px;font-weight:500;color:#243484;background:#EEF1FA;
+      border-radius:6px;padding:4px 8px;margin-top:8px}
+.li-r{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
+.li-ret{font-size:16px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.li-v{font-size:9.5px;font-weight:500;color:#A3ABC2}
+
+/* ── 대화 ── */
+.chd{background:#243484;padding:30px 20px 18px;flex-shrink:0}
+.chd-r{display:flex;align-items:center;gap:12px}
+.chd-n{font-size:17px;font-weight:800;color:#fff;letter-spacing:-.02em}
+.chd-c{font-size:10px;color:rgba(255,255,255,.5);margin-top:3px}
+.chd-v{font-size:20px;font-weight:800;color:#fff;letter-spacing:-.02em}
+.qbar{display:flex;flex-wrap:nowrap;gap:5px;justify-content:center;flex-shrink:0;padding:10px 14px;
+      background:#fff;border-bottom:1px solid #E4E8F4;overflow-x:auto}
+.qbar::-webkit-scrollbar{display:none}
+.qb{flex:0 0 auto;white-space:nowrap;font-size:11px;font-weight:500;padding:9px 11px;border-radius:8px;
+    border:1px solid #E4E8F4;background:#fff;color:#243484;cursor:pointer;min-height:38px;
+    display:inline-flex;align-items:center;transition:.15s}
+.chat{flex:1;padding:16px 14px 24px;display:flex;flex-direction:column;gap:10px;background:#fff}
+.hint{font-size:10.5px;color:#A3ABC2;text-align:center;line-height:1.6;padding:8px 20px}
+.ex{display:none;flex-direction:column;gap:10px}
+.exq{display:flex;flex-direction:column;align-items:flex-end;gap:6px;padding:2px 0 6px;opacity:.55;pointer-events:none;user-select:none}
+.eq-l{font-size:10.5px;font-weight:600;color:#8F97C4;margin-right:4px}
+.eq{font-size:12.5px;font-weight:500;color:#243484;background:#EEF1F9;border:1px dashed #C9CFE6;
+    border-radius:14px 14px 4px 14px;padding:9px 13px;line-height:1.45;max-width:82%}
+.bt .sl{display:block}
+.bt .sl+.sl{margin-top:6px}
+.gen-src{font-size:10px;color:#A3ABC2;padding-left:2px}
+.ld{display:flex;gap:8px;align-items:flex-start}
+.ld-b{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:#6B7499;background:#F5F7FC;
+      border:1px solid #E4E8F4;border-radius:4px 14px 14px 14px;padding:11px 14px}
+.ld-d{display:inline-flex;gap:3px}
+.ld-d i{width:5px;height:5px;border-radius:50%;background:#8F97C4;animation:ldb 1s infinite ease-in-out}
+.ld-d i:nth-child(2){animation-delay:.15s}.ld-d i:nth-child(3){animation-delay:.3s}
+@keyframes ldb{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+@media (prefers-reduced-motion:reduce){.ld-d i{animation:none;opacity:.7}}
+.snd[disabled]{opacity:.45;cursor:default}
+.snd:focus-visible{outline:2px solid #243484;outline-offset:2px}
+button.snd{border:0;font-family:inherit}
+.mu{display:flex;justify-content:flex-end}
+.bu{max-width:76%;padding:11px 14px;border-radius:14px 14px 4px 14px;background:#243484;color:#fff;
+    font-size:13px;line-height:1.6}
+.ma{display:flex;gap:8px;align-items:flex-start}
+.av{width:26px;height:26px;border-radius:8px;background:#243484;display:flex;align-items:center;
+    justify-content:center;font-size:9px;font-weight:700;color:#fff;flex-shrink:0;margin-top:2px}
+.aw{max-width:88%;display:flex;flex-direction:column;gap:8px}
+.bt{padding:12px 14px;border-radius:14px 14px 14px 4px;background:#fff;border:1px solid #E4E8F4;
+    font-size:13px;line-height:1.7;color:#1A1F36}
+.crd{background:#fff;border-radius:12px;padding:14px;border:1px solid #E4E8F4}
+.crd-t{font-size:9.5px;font-weight:800;color:#4C5BA8;letter-spacing:.1em;margin-bottom:12px}
+.br{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+.br:last-child{margin-bottom:0}
+.br-l{font-size:10.5px;color:#646D8C;width:64px;flex-shrink:0}
+.br-t{flex:1;height:5px;background:#EEF1FA;border-radius:3px;overflow:hidden}
+.br-f{height:100%;border-radius:3px}
+.br-v{font-size:10.5px;font-weight:800;width:44px;text-align:right;flex-shrink:0}
+.tbl{width:100%;border-radius:12px;overflow:hidden;border:1px solid #E4E8F4;background:#fff}
+.th{display:flex;background:#243484}
+.th-l{flex:0 0 62px;padding:12px 8px;font-size:9px;color:rgba(255,255,255,.45);
+      border-right:1px solid rgba(255,255,255,.1)}
+.th-c{flex:1;padding:11px 6px;text-align:center;border-right:1px solid rgba(255,255,255,.1)}
+.th-c:last-child{border-right:none}
+.th-b{font-size:7.5px;padding:2px 6px;border-radius:3px;font-weight:700;display:inline-block;margin-bottom:6px}
+.th-b.cur{background:#fff;color:#243484}
+.th-b.alt{background:rgba(255,255,255,.14);color:rgba(255,255,255,.7)}
+.th-n{font-size:10.5px;font-weight:700;color:#fff;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tr{display:flex;border-bottom:1px solid #EDF0F8;align-items:center}
+.tr:last-child{border-bottom:none}
+.td-l{flex:0 0 62px;padding:10px 8px;font-size:10px;color:#646D8C;border-right:1px solid #EDF0F8;white-space:nowrap}
+.td{flex:1;padding:10px 6px;font-size:11.5px;font-weight:800;text-align:center;border-right:1px solid #EDF0F8}
+.td:last-child{border-right:none}
+.g{color:#243484}.a{color:#2563EB}.r{color:#C23A4B}.b{color:#4C5BA8}
+.why{margin-top:9px;background:#F5F7FC;border:1px solid #E4E8F4;border-radius:10px;padding:11px 12px}
+.why-t{font-size:9.5px;font-weight:800;color:#243484;letter-spacing:.06em;margin-bottom:8px}
+.why-r{display:flex;gap:7px;align-items:baseline;margin-bottom:6px}
+.why-r:last-child{margin-bottom:0}
+.why-n{flex-shrink:0;font-size:10px;font-weight:800;color:#1A1F36}
+.why-x{font-size:10.5px;font-weight:500;color:#646D8C;line-height:1.55}
+.tc{background:#EEF1FA;border-radius:12px;padding:14px;border:1px solid #DDE3F3}
+.tc-t{font-size:9.5px;font-weight:800;color:#243484;letter-spacing:.1em;margin-bottom:9px}
+.tc-i{font-size:11px;color:#3B4470;line-height:1.7;display:flex;gap:6px;margin-bottom:3px}
+.src{font-size:9px;color:#A3ABC2;margin-top:2px}
+
+@media (max-width:480px){
+  body{padding:0;background:#fff;align-items:stretch}
+  #app{width:100%;height:100vh;max-height:none;border-radius:0;box-shadow:none}
+  .hd{padding-top:calc(env(safe-area-inset-top,0px) + 24px)}
+  .chd{padding-top:calc(env(safe-area-inset-top,0px) + 22px)}
+}
+
+#nav0:checked ~ #app .nav0{display:flex}
+#nav1:checked ~ #app .nav1{display:flex}
+#c_a_005930:checked ~ #app .c_a_005930{display:flex}
+#c_a_373220:checked ~ #app .c_a_373220{display:flex}
+#c_a_005490:checked ~ #app .c_a_005490{display:flex}
+#c_a_105560:checked ~ #app .c_a_105560{display:flex}
+#c_a_035420:checked ~ #app .c_a_035420{display:flex}
+#c_b_000660:checked ~ #app .c_b_000660{display:flex}
+#c_b_005930:checked ~ #app .c_b_005930{display:flex}
+#c_b_373220:checked ~ #app .c_b_373220{display:flex}
+#c_b_035720:checked ~ #app .c_b_035720{display:flex}
+#c_b_005380:checked ~ #app .c_b_005380{display:flex}
+#c_c_247540:checked ~ #app .c_c_247540{display:flex}
+#c_c_000660:checked ~ #app .c_c_000660{display:flex}
+#c_c_068270:checked ~ #app .c_c_068270{display:flex}
+#c_c_035720:checked ~ #app .c_c_035720{display:flex}
+#c_c_035420:checked ~ #app .c_c_035420{display:flex}
+#r1:checked ~ #app label[for="r1"]{background:#243484;border-color:#243484}
+#r1:checked ~ #app label[for="r1"] .opt-t{color:#fff}
+#r1:checked ~ #app label[for="r1"] .opt-s{color:rgba(255,255,255,.78)}
+#r1:checked ~ #app label.chip[for="r1"]{color:#fff}
+#r2:checked ~ #app label[for="r2"]{background:#243484;border-color:#243484}
+#r2:checked ~ #app label[for="r2"] .opt-t{color:#fff}
+#r2:checked ~ #app label[for="r2"] .opt-s{color:rgba(255,255,255,.78)}
+#r2:checked ~ #app label.chip[for="r2"]{color:#fff}
+#r3:checked ~ #app label[for="r3"]{background:#243484;border-color:#243484}
+#r3:checked ~ #app label[for="r3"] .opt-t{color:#fff}
+#r3:checked ~ #app label[for="r3"] .opt-s{color:rgba(255,255,255,.78)}
+#r3:checked ~ #app label.chip[for="r3"]{color:#fff}
+#r4:checked ~ #app label[for="r4"]{background:#243484;border-color:#243484}
+#r4:checked ~ #app label[for="r4"] .opt-t{color:#fff}
+#r4:checked ~ #app label[for="r4"] .opt-s{color:rgba(255,255,255,.78)}
+#r4:checked ~ #app label.chip[for="r4"]{color:#fff}
+#r5:checked ~ #app label[for="r5"]{background:#243484;border-color:#243484}
+#r5:checked ~ #app label[for="r5"] .opt-t{color:#fff}
+#r5:checked ~ #app label[for="r5"] .opt-s{color:rgba(255,255,255,.78)}
+#r5:checked ~ #app label.chip[for="r5"]{color:#fff}
+#p1:checked ~ #app label[for="p1"]{background:#243484;border-color:#243484}
+#p1:checked ~ #app label[for="p1"] .opt-t{color:#fff}
+#p1:checked ~ #app label[for="p1"] .opt-s{color:rgba(255,255,255,.78)}
+#p1:checked ~ #app label.chip[for="p1"]{color:#fff}
+#p2:checked ~ #app label[for="p2"]{background:#243484;border-color:#243484}
+#p2:checked ~ #app label[for="p2"] .opt-t{color:#fff}
+#p2:checked ~ #app label[for="p2"] .opt-s{color:rgba(255,255,255,.78)}
+#p2:checked ~ #app label.chip[for="p2"]{color:#fff}
+#p3:checked ~ #app label[for="p3"]{background:#243484;border-color:#243484}
+#p3:checked ~ #app label[for="p3"] .opt-t{color:#fff}
+#p3:checked ~ #app label[for="p3"] .opt-s{color:rgba(255,255,255,.78)}
+#p3:checked ~ #app label.chip[for="p3"]{color:#fff}
+#p4:checked ~ #app label[for="p4"]{background:#243484;border-color:#243484}
+#p4:checked ~ #app label[for="p4"] .opt-t{color:#fff}
+#p4:checked ~ #app label[for="p4"] .opt-s{color:rgba(255,255,255,.78)}
+#p4:checked ~ #app label.chip[for="p4"]{color:#fff}
+#a1:checked ~ #app label[for="a1"]{background:#243484;border-color:#243484}
+#a1:checked ~ #app label[for="a1"] .opt-t{color:#fff}
+#a1:checked ~ #app label[for="a1"] .opt-s{color:rgba(255,255,255,.78)}
+#a1:checked ~ #app label.chip[for="a1"]{color:#fff}
+#a2:checked ~ #app label[for="a2"]{background:#243484;border-color:#243484}
+#a2:checked ~ #app label[for="a2"] .opt-t{color:#fff}
+#a2:checked ~ #app label[for="a2"] .opt-s{color:rgba(255,255,255,.78)}
+#a2:checked ~ #app label.chip[for="a2"]{color:#fff}
+#a3:checked ~ #app label[for="a3"]{background:#243484;border-color:#243484}
+#a3:checked ~ #app label[for="a3"] .opt-t{color:#fff}
+#a3:checked ~ #app label[for="a3"] .opt-s{color:rgba(255,255,255,.78)}
+#a3:checked ~ #app label.chip[for="a3"]{color:#fff}
+#s1:checked ~ #app label[for="s1"]{background:#243484;border-color:#243484}
+#s1:checked ~ #app label[for="s1"] .opt-t{color:#fff}
+#s1:checked ~ #app label[for="s1"] .opt-s{color:rgba(255,255,255,.78)}
+#s1:checked ~ #app label.chip[for="s1"]{color:#fff}
+#s2:checked ~ #app label[for="s2"]{background:#243484;border-color:#243484}
+#s2:checked ~ #app label[for="s2"] .opt-t{color:#fff}
+#s2:checked ~ #app label[for="s2"] .opt-s{color:rgba(255,255,255,.78)}
+#s2:checked ~ #app label.chip[for="s2"]{color:#fff}
+#s3:checked ~ #app label[for="s3"]{background:#243484;border-color:#243484}
+#s3:checked ~ #app label[for="s3"] .opt-t{color:#fff}
+#s3:checked ~ #app label[for="s3"] .opt-s{color:rgba(255,255,255,.78)}
+#s3:checked ~ #app label.chip[for="s3"]{color:#fff}
+#s4:checked ~ #app label[for="s4"]{background:#243484;border-color:#243484}
+#s4:checked ~ #app label[for="s4"] .opt-t{color:#fff}
+#s4:checked ~ #app label[for="s4"] .opt-s{color:rgba(255,255,255,.78)}
+#s4:checked ~ #app label.chip[for="s4"]{color:#fff}
+#s5:checked ~ #app label[for="s5"]{background:#243484;border-color:#243484}
+#s5:checked ~ #app label[for="s5"] .opt-t{color:#fff}
+#s5:checked ~ #app label[for="s5"] .opt-s{color:rgba(255,255,255,.78)}
+#s5:checked ~ #app label.chip[for="s5"]{color:#fff}
+#t1:checked ~ #app label[for="t1"]{background:#243484;border-color:#243484}
+#t1:checked ~ #app label[for="t1"] .opt-t{color:#fff}
+#t1:checked ~ #app label[for="t1"] .opt-s{color:rgba(255,255,255,.78)}
+#t1:checked ~ #app label.chip[for="t1"]{color:#fff}
+#t2:checked ~ #app label[for="t2"]{background:#243484;border-color:#243484}
+#t2:checked ~ #app label[for="t2"] .opt-t{color:#fff}
+#t2:checked ~ #app label[for="t2"] .opt-s{color:rgba(255,255,255,.78)}
+#t2:checked ~ #app label.chip[for="t2"]{color:#fff}
+#t3:checked ~ #app label[for="t3"]{background:#243484;border-color:#243484}
+#t3:checked ~ #app label[for="t3"] .opt-t{color:#fff}
+#t3:checked ~ #app label[for="t3"] .opt-s{color:rgba(255,255,255,.78)}
+#t3:checked ~ #app label.chip[for="t3"]{color:#fff}
+#r1:checked ~ #app .res-a{display:flex}
+#r1:checked ~ #app .rl-r1{display:inline}
+#r2:checked ~ #app .res-a{display:flex}
+#r2:checked ~ #app .rl-r2{display:inline}
+#r3:checked ~ #app .res-b{display:flex}
+#r3:checked ~ #app .rl-r3{display:inline}
+#r4:checked ~ #app .res-c{display:flex}
+#r4:checked ~ #app .rl-r4{display:inline}
+#r5:checked ~ #app .res-c{display:flex}
+#r5:checked ~ #app .rl-r5{display:inline}
+#p1:checked ~ #app .tg-p1{display:inline-block}
+#p2:checked ~ #app .tg-p2{display:inline-block}
+#p3:checked ~ #app .tg-p3{display:inline-block}
+#p4:checked ~ #app .tg-p4{display:inline-block}
+#a1:checked ~ #app .tg-a1{display:inline-block}
+#a2:checked ~ #app .tg-a2{display:inline-block}
+#a3:checked ~ #app .tg-a3{display:inline-block}
+#s1:checked ~ #app .tg-s1{display:inline-block}
+#s2:checked ~ #app .tg-s2{display:inline-block}
+#s3:checked ~ #app .tg-s3{display:inline-block}
+#s4:checked ~ #app .tg-s4{display:inline-block}
+#s5:checked ~ #app .tg-s5{display:inline-block}
+#t1:checked ~ #app .tg-t1{display:inline-block}
+#t2:checked ~ #app .tg-t2{display:inline-block}
+#t3:checked ~ #app .tg-t3{display:inline-block}
+#q_a_005930_reason:checked ~ #app .q_a_005930_reason{display:flex}
+#q_a_005930_reason:checked ~ #app label[for="q_a_005930_reason"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_005930_risk:checked ~ #app .q_a_005930_risk{display:flex}
+#q_a_005930_risk:checked ~ #app label[for="q_a_005930_risk"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_005930_compare:checked ~ #app .q_a_005930_compare{display:flex}
+#q_a_005930_compare:checked ~ #app label[for="q_a_005930_compare"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_005930_transparency:checked ~ #app .q_a_005930_transparency{display:flex}
+#q_a_005930_transparency:checked ~ #app label[for="q_a_005930_transparency"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_005930_dividend:checked ~ #app .q_a_005930_dividend{display:flex}
+#q_a_005930_dividend:checked ~ #app label[for="q_a_005930_dividend"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_005930_fundamental:checked ~ #app .q_a_005930_fundamental{display:flex}
+#q_a_005930_fundamental:checked ~ #app label[for="q_a_005930_fundamental"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_373220_reason:checked ~ #app .q_a_373220_reason{display:flex}
+#q_a_373220_reason:checked ~ #app label[for="q_a_373220_reason"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_373220_risk:checked ~ #app .q_a_373220_risk{display:flex}
+#q_a_373220_risk:checked ~ #app label[for="q_a_373220_risk"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_373220_compare:checked ~ #app .q_a_373220_compare{display:flex}
+#q_a_373220_compare:checked ~ #app label[for="q_a_373220_compare"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_373220_transparency:checked ~ #app .q_a_373220_transparency{display:flex}
+#q_a_373220_transparency:checked ~ #app label[for="q_a_373220_transparency"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_373220_dividend:checked ~ #app .q_a_373220_dividend{display:flex}
+#q_a_373220_dividend:checked ~ #app label[for="q_a_373220_dividend"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_373220_fundamental:checked ~ #app .q_a_373220_fundamental{display:flex}
+#q_a_373220_fundamental:checked ~ #app label[for="q_a_373220_fundamental"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_005490_reason:checked ~ #app .q_a_005490_reason{display:flex}
+#q_a_005490_reason:checked ~ #app label[for="q_a_005490_reason"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_005490_risk:checked ~ #app .q_a_005490_risk{display:flex}
+#q_a_005490_risk:checked ~ #app label[for="q_a_005490_risk"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_005490_compare:checked ~ #app .q_a_005490_compare{display:flex}
+#q_a_005490_compare:checked ~ #app label[for="q_a_005490_compare"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_005490_transparency:checked ~ #app .q_a_005490_transparency{display:flex}
+#q_a_005490_transparency:checked ~ #app label[for="q_a_005490_transparency"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_005490_dividend:checked ~ #app .q_a_005490_dividend{display:flex}
+#q_a_005490_dividend:checked ~ #app label[for="q_a_005490_dividend"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_005490_fundamental:checked ~ #app .q_a_005490_fundamental{display:flex}
+#q_a_005490_fundamental:checked ~ #app label[for="q_a_005490_fundamental"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_105560_reason:checked ~ #app .q_a_105560_reason{display:flex}
+#q_a_105560_reason:checked ~ #app label[for="q_a_105560_reason"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_105560_risk:checked ~ #app .q_a_105560_risk{display:flex}
+#q_a_105560_risk:checked ~ #app label[for="q_a_105560_risk"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_105560_compare:checked ~ #app .q_a_105560_compare{display:flex}
+#q_a_105560_compare:checked ~ #app label[for="q_a_105560_compare"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_105560_transparency:checked ~ #app .q_a_105560_transparency{display:flex}
+#q_a_105560_transparency:checked ~ #app label[for="q_a_105560_transparency"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_105560_dividend:checked ~ #app .q_a_105560_dividend{display:flex}
+#q_a_105560_dividend:checked ~ #app label[for="q_a_105560_dividend"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_105560_fundamental:checked ~ #app .q_a_105560_fundamental{display:flex}
+#q_a_105560_fundamental:checked ~ #app label[for="q_a_105560_fundamental"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_035420_reason:checked ~ #app .q_a_035420_reason{display:flex}
+#q_a_035420_reason:checked ~ #app label[for="q_a_035420_reason"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_035420_risk:checked ~ #app .q_a_035420_risk{display:flex}
+#q_a_035420_risk:checked ~ #app label[for="q_a_035420_risk"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_035420_compare:checked ~ #app .q_a_035420_compare{display:flex}
+#q_a_035420_compare:checked ~ #app label[for="q_a_035420_compare"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_035420_transparency:checked ~ #app .q_a_035420_transparency{display:flex}
+#q_a_035420_transparency:checked ~ #app label[for="q_a_035420_transparency"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_035420_dividend:checked ~ #app .q_a_035420_dividend{display:flex}
+#q_a_035420_dividend:checked ~ #app label[for="q_a_035420_dividend"]{background:#243484;border-color:#243484;color:#fff}
+#q_a_035420_fundamental:checked ~ #app .q_a_035420_fundamental{display:flex}
+#q_a_035420_fundamental:checked ~ #app label[for="q_a_035420_fundamental"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_000660_reason:checked ~ #app .q_b_000660_reason{display:flex}
+#q_b_000660_reason:checked ~ #app label[for="q_b_000660_reason"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_000660_risk:checked ~ #app .q_b_000660_risk{display:flex}
+#q_b_000660_risk:checked ~ #app label[for="q_b_000660_risk"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_000660_compare:checked ~ #app .q_b_000660_compare{display:flex}
+#q_b_000660_compare:checked ~ #app label[for="q_b_000660_compare"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_000660_transparency:checked ~ #app .q_b_000660_transparency{display:flex}
+#q_b_000660_transparency:checked ~ #app label[for="q_b_000660_transparency"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_000660_dividend:checked ~ #app .q_b_000660_dividend{display:flex}
+#q_b_000660_dividend:checked ~ #app label[for="q_b_000660_dividend"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_000660_fundamental:checked ~ #app .q_b_000660_fundamental{display:flex}
+#q_b_000660_fundamental:checked ~ #app label[for="q_b_000660_fundamental"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_005930_reason:checked ~ #app .q_b_005930_reason{display:flex}
+#q_b_005930_reason:checked ~ #app label[for="q_b_005930_reason"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_005930_risk:checked ~ #app .q_b_005930_risk{display:flex}
+#q_b_005930_risk:checked ~ #app label[for="q_b_005930_risk"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_005930_compare:checked ~ #app .q_b_005930_compare{display:flex}
+#q_b_005930_compare:checked ~ #app label[for="q_b_005930_compare"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_005930_transparency:checked ~ #app .q_b_005930_transparency{display:flex}
+#q_b_005930_transparency:checked ~ #app label[for="q_b_005930_transparency"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_005930_dividend:checked ~ #app .q_b_005930_dividend{display:flex}
+#q_b_005930_dividend:checked ~ #app label[for="q_b_005930_dividend"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_005930_fundamental:checked ~ #app .q_b_005930_fundamental{display:flex}
+#q_b_005930_fundamental:checked ~ #app label[for="q_b_005930_fundamental"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_373220_reason:checked ~ #app .q_b_373220_reason{display:flex}
+#q_b_373220_reason:checked ~ #app label[for="q_b_373220_reason"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_373220_risk:checked ~ #app .q_b_373220_risk{display:flex}
+#q_b_373220_risk:checked ~ #app label[for="q_b_373220_risk"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_373220_compare:checked ~ #app .q_b_373220_compare{display:flex}
+#q_b_373220_compare:checked ~ #app label[for="q_b_373220_compare"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_373220_transparency:checked ~ #app .q_b_373220_transparency{display:flex}
+#q_b_373220_transparency:checked ~ #app label[for="q_b_373220_transparency"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_373220_dividend:checked ~ #app .q_b_373220_dividend{display:flex}
+#q_b_373220_dividend:checked ~ #app label[for="q_b_373220_dividend"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_373220_fundamental:checked ~ #app .q_b_373220_fundamental{display:flex}
+#q_b_373220_fundamental:checked ~ #app label[for="q_b_373220_fundamental"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_035720_reason:checked ~ #app .q_b_035720_reason{display:flex}
+#q_b_035720_reason:checked ~ #app label[for="q_b_035720_reason"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_035720_risk:checked ~ #app .q_b_035720_risk{display:flex}
+#q_b_035720_risk:checked ~ #app label[for="q_b_035720_risk"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_035720_compare:checked ~ #app .q_b_035720_compare{display:flex}
+#q_b_035720_compare:checked ~ #app label[for="q_b_035720_compare"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_035720_transparency:checked ~ #app .q_b_035720_transparency{display:flex}
+#q_b_035720_transparency:checked ~ #app label[for="q_b_035720_transparency"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_035720_dividend:checked ~ #app .q_b_035720_dividend{display:flex}
+#q_b_035720_dividend:checked ~ #app label[for="q_b_035720_dividend"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_035720_fundamental:checked ~ #app .q_b_035720_fundamental{display:flex}
+#q_b_035720_fundamental:checked ~ #app label[for="q_b_035720_fundamental"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_005380_reason:checked ~ #app .q_b_005380_reason{display:flex}
+#q_b_005380_reason:checked ~ #app label[for="q_b_005380_reason"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_005380_risk:checked ~ #app .q_b_005380_risk{display:flex}
+#q_b_005380_risk:checked ~ #app label[for="q_b_005380_risk"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_005380_compare:checked ~ #app .q_b_005380_compare{display:flex}
+#q_b_005380_compare:checked ~ #app label[for="q_b_005380_compare"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_005380_transparency:checked ~ #app .q_b_005380_transparency{display:flex}
+#q_b_005380_transparency:checked ~ #app label[for="q_b_005380_transparency"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_005380_dividend:checked ~ #app .q_b_005380_dividend{display:flex}
+#q_b_005380_dividend:checked ~ #app label[for="q_b_005380_dividend"]{background:#243484;border-color:#243484;color:#fff}
+#q_b_005380_fundamental:checked ~ #app .q_b_005380_fundamental{display:flex}
+#q_b_005380_fundamental:checked ~ #app label[for="q_b_005380_fundamental"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_247540_reason:checked ~ #app .q_c_247540_reason{display:flex}
+#q_c_247540_reason:checked ~ #app label[for="q_c_247540_reason"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_247540_risk:checked ~ #app .q_c_247540_risk{display:flex}
+#q_c_247540_risk:checked ~ #app label[for="q_c_247540_risk"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_247540_compare:checked ~ #app .q_c_247540_compare{display:flex}
+#q_c_247540_compare:checked ~ #app label[for="q_c_247540_compare"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_247540_transparency:checked ~ #app .q_c_247540_transparency{display:flex}
+#q_c_247540_transparency:checked ~ #app label[for="q_c_247540_transparency"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_247540_dividend:checked ~ #app .q_c_247540_dividend{display:flex}
+#q_c_247540_dividend:checked ~ #app label[for="q_c_247540_dividend"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_247540_fundamental:checked ~ #app .q_c_247540_fundamental{display:flex}
+#q_c_247540_fundamental:checked ~ #app label[for="q_c_247540_fundamental"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_000660_reason:checked ~ #app .q_c_000660_reason{display:flex}
+#q_c_000660_reason:checked ~ #app label[for="q_c_000660_reason"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_000660_risk:checked ~ #app .q_c_000660_risk{display:flex}
+#q_c_000660_risk:checked ~ #app label[for="q_c_000660_risk"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_000660_compare:checked ~ #app .q_c_000660_compare{display:flex}
+#q_c_000660_compare:checked ~ #app label[for="q_c_000660_compare"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_000660_transparency:checked ~ #app .q_c_000660_transparency{display:flex}
+#q_c_000660_transparency:checked ~ #app label[for="q_c_000660_transparency"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_000660_dividend:checked ~ #app .q_c_000660_dividend{display:flex}
+#q_c_000660_dividend:checked ~ #app label[for="q_c_000660_dividend"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_000660_fundamental:checked ~ #app .q_c_000660_fundamental{display:flex}
+#q_c_000660_fundamental:checked ~ #app label[for="q_c_000660_fundamental"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_068270_reason:checked ~ #app .q_c_068270_reason{display:flex}
+#q_c_068270_reason:checked ~ #app label[for="q_c_068270_reason"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_068270_risk:checked ~ #app .q_c_068270_risk{display:flex}
+#q_c_068270_risk:checked ~ #app label[for="q_c_068270_risk"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_068270_compare:checked ~ #app .q_c_068270_compare{display:flex}
+#q_c_068270_compare:checked ~ #app label[for="q_c_068270_compare"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_068270_transparency:checked ~ #app .q_c_068270_transparency{display:flex}
+#q_c_068270_transparency:checked ~ #app label[for="q_c_068270_transparency"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_068270_dividend:checked ~ #app .q_c_068270_dividend{display:flex}
+#q_c_068270_dividend:checked ~ #app label[for="q_c_068270_dividend"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_068270_fundamental:checked ~ #app .q_c_068270_fundamental{display:flex}
+#q_c_068270_fundamental:checked ~ #app label[for="q_c_068270_fundamental"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_035720_reason:checked ~ #app .q_c_035720_reason{display:flex}
+#q_c_035720_reason:checked ~ #app label[for="q_c_035720_reason"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_035720_risk:checked ~ #app .q_c_035720_risk{display:flex}
+#q_c_035720_risk:checked ~ #app label[for="q_c_035720_risk"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_035720_compare:checked ~ #app .q_c_035720_compare{display:flex}
+#q_c_035720_compare:checked ~ #app label[for="q_c_035720_compare"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_035720_transparency:checked ~ #app .q_c_035720_transparency{display:flex}
+#q_c_035720_transparency:checked ~ #app label[for="q_c_035720_transparency"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_035720_dividend:checked ~ #app .q_c_035720_dividend{display:flex}
+#q_c_035720_dividend:checked ~ #app label[for="q_c_035720_dividend"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_035720_fundamental:checked ~ #app .q_c_035720_fundamental{display:flex}
+#q_c_035720_fundamental:checked ~ #app label[for="q_c_035720_fundamental"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_035420_reason:checked ~ #app .q_c_035420_reason{display:flex}
+#q_c_035420_reason:checked ~ #app label[for="q_c_035420_reason"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_035420_risk:checked ~ #app .q_c_035420_risk{display:flex}
+#q_c_035420_risk:checked ~ #app label[for="q_c_035420_risk"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_035420_compare:checked ~ #app .q_c_035420_compare{display:flex}
+#q_c_035420_compare:checked ~ #app label[for="q_c_035420_compare"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_035420_transparency:checked ~ #app .q_c_035420_transparency{display:flex}
+#q_c_035420_transparency:checked ~ #app label[for="q_c_035420_transparency"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_035420_dividend:checked ~ #app .q_c_035420_dividend{display:flex}
+#q_c_035420_dividend:checked ~ #app label[for="q_c_035420_dividend"]{background:#243484;border-color:#243484;color:#fff}
+#q_c_035420_fundamental:checked ~ #app .q_c_035420_fundamental{display:flex}
+#q_c_035420_fundamental:checked ~ #app label[for="q_c_035420_fundamental"]{background:#243484;border-color:#243484;color:#fff}
+.res-none{display:flex;flex-direction:column}
+#r1:checked ~ #app .res-none{display:none}
+#r1:checked ~ #app .cta{background:#243484;color:#fff}
+#r1:checked ~ #app .cta-lock{display:none}
+#r2:checked ~ #app .res-none{display:none}
+#r2:checked ~ #app .cta{background:#243484;color:#fff}
+#r2:checked ~ #app .cta-lock{display:none}
+#r3:checked ~ #app .res-none{display:none}
+#r3:checked ~ #app .cta{background:#243484;color:#fff}
+#r3:checked ~ #app .cta-lock{display:none}
+#r4:checked ~ #app .res-none{display:none}
+#r4:checked ~ #app .cta{background:#243484;color:#fff}
+#r4:checked ~ #app .cta-lock{display:none}
+#r5:checked ~ #app .res-none{display:none}
+#r5:checked ~ #app .cta{background:#243484;color:#fff}
+#r5:checked ~ #app .cta-lock{display:none}
+.cta{background:#CBD2E4;color:#F3F5FB}
+.cta-lock{display:block;font-size:10.5px;color:#A3ABC2;text-align:center;margin-top:8px}
+#a1:checked ~ #app .fld input:placeholder-shown ~ .ov-a1{display:block}
+#a2:checked ~ #app .fld input:placeholder-shown ~ .ov-a2{display:block}
+#a3:checked ~ #app .fld input:placeholder-shown ~ .ov-a3{display:block}
+#t1:checked ~ #app .fld input:placeholder-shown ~ .ov-t1{display:block}
+#t2:checked ~ #app .fld input:placeholder-shown ~ .ov-t2{display:block}
+#t3:checked ~ #app .fld input:placeholder-shown ~ .ov-t3{display:block}
+#s1:checked ~ #app .fld input:placeholder-shown ~ .ov-s1{display:inline-block}
+#s2:checked ~ #app .fld input:placeholder-shown ~ .ov-s2{display:inline-block}
+#s3:checked ~ #app .fld input:placeholder-shown ~ .ov-s3{display:inline-block}
+#s4:checked ~ #app .fld input:placeholder-shown ~ .ov-s4{display:inline-block}
+#s5:checked ~ #app .fld input:placeholder-shown ~ .ov-s5{display:inline-block}
+#fq_a_005930:checked ~ #app .fq_a_005930{display:flex}
+#fq_a_373220:checked ~ #app .fq_a_373220{display:flex}
+#fq_a_005490:checked ~ #app .fq_a_005490{display:flex}
+#fq_a_105560:checked ~ #app .fq_a_105560{display:flex}
+#fq_a_035420:checked ~ #app .fq_a_035420{display:flex}
+#fq_b_000660:checked ~ #app .fq_b_000660{display:flex}
+#fq_b_005930:checked ~ #app .fq_b_005930{display:flex}
+#fq_b_373220:checked ~ #app .fq_b_373220{display:flex}
+#fq_b_035720:checked ~ #app .fq_b_035720{display:flex}
+#fq_b_005380:checked ~ #app .fq_b_005380{display:flex}
+#fq_c_247540:checked ~ #app .fq_c_247540{display:flex}
+#fq_c_000660:checked ~ #app .fq_c_000660{display:flex}
+#fq_c_068270:checked ~ #app .fq_c_068270{display:flex}
+#fq_c_035720:checked ~ #app .fq_c_035720{display:flex}
+#fq_c_035420:checked ~ #app .fq_c_035420{display:flex}
+.res-a,.res-b,.res-c{display:none;flex-direction:column}
+.rl-r1,.rl-r2,.rl-r3,.rl-r4,.rl-r5{display:none}
+.tg-p1,.tg-p2,.tg-p3,.tg-p4,.tg-a1,.tg-a2,.tg-a3,.tg-s1,.tg-s2,.tg-s3,.tg-s4,.tg-s5,.tg-t1,.tg-t2,.tg-t3{display:none}
+
+.empty{padding:60px 26px;display:flex;flex-direction:column;align-items:center;gap:9px;text-align:center}
+.empty-t{font-size:16px;font-weight:800;color:#1A1F36}
+.empty-s{font-size:12px;color:#9AA2BC;line-height:1.6}
+.empty-b{margin-top:8px;padding:12px 20px;border-radius:10px;background:#243484;color:#fff;
+         font-size:12.5px;font-weight:700;cursor:pointer}
+#logPanel{margin-top:18px;border:1px solid #E4E8F4;border-radius:12px;padding:13px;background:#F5F7FC}
+.lg-h{display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:800;color:#243484;margin-bottom:9px}
+.lg-c{font-weight:500;color:#646D8C}
+.lg-b{width:100%;padding:10px;border:1px solid #E4E8F4;border-radius:9px;background:#fff;
+      color:#243484;font-size:11.5px;font-weight:700;font-family:inherit;cursor:pointer}
+.lg-o{margin-top:9px;background:#fff;border:1px solid #E4E8F4;border-radius:9px;padding:10px;
+      font:10px/1.6 monospace;color:#3B4470;max-height:170px;overflow:auto;white-space:pre-wrap}
+
+.fld{position:relative;margin-bottom:9px}
+.fld .memo{margin-bottom:0}
+.fld .ovl{display:none!important}
+.ovl{display:none;position:absolute;left:15px;top:50%;transform:translateY(-50%);
+     font-size:16px;font-weight:700;color:#1A1F36;pointer-events:none;background:#fff;padding-right:10px}
+.ovl.multi{position:static;transform:none;margin:8px 0 0 2px;font-size:13px;font-weight:700;
+           color:#243484;background:none;padding:0}
+.pg.cht{overflow:hidden}
+.cht .chat{flex:1;overflow-y:auto;min-height:0}
+.ibar{flex-shrink:0;display:flex;gap:8px;align-items:center;padding:12px 14px;
+      padding-bottom:calc(env(safe-area-inset-bottom,0px) + 14px);border-top:1px solid #E4E8F4;background:#fff}
+.cinp{flex:1;border:1px solid #E4E8F4;border-radius:10px;padding:12px 14px;font-size:16px;
+      font-family:inherit;color:#1A1F36;background:#fff;outline:none}
+.snd{width:44px;height:44px;border-radius:10px;background:#243484;color:#fff;flex-shrink:0;
+     display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer}
+
+.br-v{white-space:nowrap;min-width:44px}
+.ag-c{margin-top:2px}
+.ag{display:flex;align-items:center;gap:10px;padding:5px 0}
+.ag-l{flex:0 0 74px;font-size:11.5px;font-weight:700;color:#1A1F36}.ag-l span{display:block;font-size:9.5px;font-weight:500;color:#9AA2BC}
+.ag-t{flex:1;display:flex;gap:4px}
+.ag-s{flex:1;height:8px;border-radius:4px;background:#E7EAF6}.ag-s.on{background:#243484}
+.ag-v{flex:0 0 34px;text-align:right;font-size:13px;font-weight:800;color:#243484}.ag-v em{font-style:normal;font-size:10px;color:#9AA2BC;font-weight:600}
+.ag-n{font-size:9.5px;color:#A3ABC2;margin-top:6px}
+.c-ag{display:flex;gap:14px;margin-top:10px}
+.mg{display:inline-flex;align-items:center;gap:3px;font-size:10px;color:#646D8C}.mg b{font-weight:700;margin-right:3px}
+.mg-s{width:9px;height:6px;border-radius:3px;background:#E7EAF6}.mg-s.on{background:#4C5BA8}
+.mg em{font-style:normal;font-weight:800;color:#243484;margin-left:4px}
+
+#nav2:checked ~ #app .nav2{display:flex}
+#nav3:checked ~ #app .nav3{display:flex}
+.sc-sit{font-size:14px;line-height:1.65;color:#1A1F36;margin-top:10px;background:#F5F7FC;border:1px solid #E4E8F4;border-radius:12px;padding:13px 14px}
+.sc-cond{border:1px solid #E4E8F4;border-radius:12px;overflow:hidden}
+.sc-r{display:flex;justify-content:space-between;padding:11px 14px;border-bottom:1px solid #EDF0F8;font-size:13px}
+.sc-r:last-child{border-bottom:none}
+.sc-k{color:#646D8C;font-weight:600}.sc-v{color:#243484;font-weight:800}
+.sc-task{background:#EEF1FA;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.sc-task-t{font-size:11px;font-weight:800;color:#243484;letter-spacing:.06em}
+.sc-step{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:#1A1F36;line-height:1.5}
+.sc-step b{flex-shrink:0;width:20px;height:20px;border-radius:50%;background:#243484;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center}
+.sc-step em{font-style:normal;font-weight:800;color:#243484}
+.sc-tip{font-size:11.5px;color:#646D8C;margin-top:2px}
+.ic-box,.ic-done{margin:16px 16px 0;background:#EEF1FA;border:1px solid #D9DEEE;border-radius:14px;padding:14px}
+.ic-done{display:none}
+.ic-t{font-size:10.5px;font-weight:800;color:#243484;letter-spacing:.08em;margin-bottom:6px}
+.ic-d{font-size:12.5px;color:#1A1F36;line-height:1.55}
+.ic-d b{color:#243484}
+.picks{display:flex;gap:6px;margin-top:11px;flex-wrap:wrap}
+.picks.col{flex-direction:column;margin-top:0}
+.pick{font:inherit;flex:1;min-width:90px;padding:11px 8px;border-radius:10px;border:1px solid #D9DEEE;background:#fff;color:#1A1F36;font-size:13px;font-weight:700;cursor:pointer;text-align:center}
+.picks.col .pick{text-align:left;padding:14px}
+.pick-r{font-size:10px;color:#8F97C4;margin-right:6px}
+.pick.on{background:#243484;border-color:#243484;color:#fff}.pick.on .pick-r{color:rgba(255,255,255,.7)}
+#app.pre .res-s .card{pointer-events:none;opacity:.55}
+#app.pre .go-final{display:none}
+#app:not(.pre) #icBox{display:none}
+#app:not(.pre) #icDone{display:block}
+.go-final{padding:18px 16px 26px}
+.fin-r{width:100%;font:inherit;font-size:14px;border:1px solid #D9DEEE;border-radius:12px;padding:12px;resize:none;color:#1A1F36}
+.fin-go{border:0;font-family:inherit}.fin-go[disabled]{opacity:.4;cursor:default}
+.done-c{font-size:14px;color:#1A1F36;line-height:1.7;background:#F5F7FC;border-radius:12px;padding:16px}
+.rs{display:flex;flex-direction:column;gap:8px}.rs-t{font-size:12px;font-weight:800;color:#243484}
+.rs-o{width:100%;font-family:monospace;font-size:10.5px;border:1px solid #D9DEEE;border-radius:10px;padding:10px}
+.pick:focus-visible,.fin-r:focus-visible{outline:2px solid #243484;outline-offset:2px}
+
+#navI:checked ~ #app .navI{display:flex}
+.cref{position:sticky;top:0;z-index:5;box-shadow:0 4px 10px rgba(36,52,132,.08)}
+.cr{display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;margin-top:8px}
+.cr-r{display:flex;justify-content:space-between;gap:6px;font-size:11.5px;color:#646D8C;background:#fff;border-radius:7px;padding:6px 9px}
+.cr-r b{color:#243484;font-weight:800;text-align:right}
+.sc-goal{font-size:12.5px;color:#646D8C;margin-top:9px}.sc-goal b{color:#243484}
+.gl{margin:0;padding:0;list-style:none;counter-reset:g;display:flex;flex-direction:column;gap:6px}
+.gl li{counter-increment:g;display:flex;gap:8px;font-size:12px;color:#1A1F36;line-height:1.5}
+.gl li::before{content:counter(g);flex-shrink:0;width:18px;height:18px;border-radius:50%;background:#fff;border:1px solid #243484;color:#243484;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.gl.big li{font-size:13.5px;background:#F5F7FC;border:1px solid #E4E8F4;border-radius:10px;padding:10px 12px}
+.gl.sm{margin-top:10px}
+.gd{flex-shrink:0;background:#EEF1FA;border-bottom:1px solid #D9DEEE;padding:9px 16px}
+.gd summary{font-size:11.5px;font-weight:800;color:#243484;cursor:pointer}
+.gd .gl{margin-top:8px}
+.gas{display:flex;flex-direction:column;gap:10px}
+.ga-q{display:flex;gap:7px;font-size:12.5px;color:#1A1F36;margin-bottom:6px;line-height:1.45}
+.ga-q b{flex-shrink:0;width:18px;height:18px;border-radius:50%;background:#243484;color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center}
+.ga-i{width:100%;font:inherit;font-size:14px;border:1px solid #D9DEEE;border-radius:10px;padding:11px 12px;color:#1A1F36}
+.ga-i:focus-visible{outline:2px solid #243484;outline-offset:1px}
+button.cta{border:0;font-family:inherit}
+.cond-err{display:none;margin-top:10px;background:#FDF2F3;border:1px solid #F0D6DB;color:#A3263A;border-radius:10px;padding:11px 12px;font-size:12px;line-height:1.6}
+#c_s_247540:checked ~ #app .c_s_247540{display:flex}
+#q_s_247540_reason:checked ~ #app .q_s_247540_reason{display:flex}
+#q_s_247540_risk:checked ~ #app .q_s_247540_risk{display:flex}
+#q_s_247540_compare:checked ~ #app .q_s_247540_compare{display:flex}
+#q_s_247540_transparency:checked ~ #app .q_s_247540_transparency{display:flex}
+#q_s_247540_dividend:checked ~ #app .q_s_247540_dividend{display:flex}
+#q_s_247540_fundamental:checked ~ #app .q_s_247540_fundamental{display:flex}
+#fq_s_247540:checked ~ #app .fq_s_247540{display:flex}
+#c_s_000660:checked ~ #app .c_s_000660{display:flex}
+#q_s_000660_reason:checked ~ #app .q_s_000660_reason{display:flex}
+#q_s_000660_risk:checked ~ #app .q_s_000660_risk{display:flex}
+#q_s_000660_compare:checked ~ #app .q_s_000660_compare{display:flex}
+#q_s_000660_transparency:checked ~ #app .q_s_000660_transparency{display:flex}
+#q_s_000660_dividend:checked ~ #app .q_s_000660_dividend{display:flex}
+#q_s_000660_fundamental:checked ~ #app .q_s_000660_fundamental{display:flex}
+#fq_s_000660:checked ~ #app .fq_s_000660{display:flex}
+#c_s_373220:checked ~ #app .c_s_373220{display:flex}
+#q_s_373220_reason:checked ~ #app .q_s_373220_reason{display:flex}
+#q_s_373220_risk:checked ~ #app .q_s_373220_risk{display:flex}
+#q_s_373220_compare:checked ~ #app .q_s_373220_compare{display:flex}
+#q_s_373220_transparency:checked ~ #app .q_s_373220_transparency{display:flex}
+#q_s_373220_dividend:checked ~ #app .q_s_373220_dividend{display:flex}
+#q_s_373220_fundamental:checked ~ #app .q_s_373220_fundamental{display:flex}
+#fq_s_373220:checked ~ #app .fq_s_373220{display:flex}
+</style>
+</head>
+<body>
+<input class="st" type="radio" name="nav" id="nav0" checked>
+<input class="st" type="radio" name="nav" id="navI">
+<input class="st" type="radio" name="nav" id="nav1">
+<input class="st" type="radio" name="nav" id="nav2">
+<input class="st" type="radio" name="nav" id="nav3">
+<input class="st" type="radio" name="nav" id="c_s_247540">
+<input class="st" type="radio" name="nav" id="c_s_000660">
+<input class="st" type="radio" name="nav" id="c_s_373220">
+<input class="st" type="radio" name="risk" id="r1">
+<input class="st" type="radio" name="risk" id="r2">
+<input class="st" type="radio" name="risk" id="r3">
+<input class="st" type="radio" name="risk" id="r4">
+<input class="st" type="radio" name="risk" id="r5">
+<input class="st" type="radio" name="per" id="p1">
+<input class="st" type="radio" name="per" id="p2">
+<input class="st" type="radio" name="per" id="p3">
+<input class="st" type="radio" name="per" id="p4">
+<input class="st" type="radio" name="amt" id="a1">
+<input class="st" type="radio" name="amt" id="a2">
+<input class="st" type="radio" name="amt" id="a3">
+<input class="st" type="checkbox" id="s1">
+<input class="st" type="checkbox" id="s2">
+<input class="st" type="checkbox" id="s3">
+<input class="st" type="checkbox" id="s4">
+<input class="st" type="checkbox" id="s5">
+<input class="st" type="radio" name="tgt" id="t1">
+<input class="st" type="radio" name="tgt" id="t2">
+<input class="st" type="radio" name="tgt" id="t3">
+<input class="st" type="checkbox" id="q_s_247540_reason">
+<input class="st" type="checkbox" id="q_s_247540_risk">
+<input class="st" type="checkbox" id="q_s_247540_compare">
+<input class="st" type="checkbox" id="q_s_247540_transparency">
+<input class="st" type="checkbox" id="q_s_247540_dividend">
+<input class="st" type="checkbox" id="q_s_247540_fundamental">
+<input class="st" type="checkbox" id="q_s_000660_reason">
+<input class="st" type="checkbox" id="q_s_000660_risk">
+<input class="st" type="checkbox" id="q_s_000660_compare">
+<input class="st" type="checkbox" id="q_s_000660_transparency">
+<input class="st" type="checkbox" id="q_s_000660_dividend">
+<input class="st" type="checkbox" id="q_s_000660_fundamental">
+<input class="st" type="checkbox" id="q_s_373220_reason">
+<input class="st" type="checkbox" id="q_s_373220_risk">
+<input class="st" type="checkbox" id="q_s_373220_compare">
+<input class="st" type="checkbox" id="q_s_373220_transparency">
+<input class="st" type="checkbox" id="q_s_373220_dividend">
+<input class="st" type="checkbox" id="q_s_373220_fundamental">
+<input class="st" type="checkbox" id="fq_s_247540">
+<input class="st" type="checkbox" id="fq_s_000660">
+<input class="st" type="checkbox" id="fq_s_373220">
+<div id="app">
+<div class="pg nav0"><div class="hd"><div class="hd-eye">투자 상황</div><div class="hd-ttl">30대 직장인의<br>투자를 도와주세요</div><div class="hd-sub">아래 상황의 인물이 되었다고 생각하고 진행해 주세요</div></div><div class="body"><div><div class="sec-h"><span class="sec-num">01</span><span class="sec-ttl">상황</span></div><div class="sc-sit">당장 쓸 일이 없는 여유자금을 오래 운용해 자산을 키우고 싶습니다.</div><div class="sc-goal">투자 목적 · <b>자본 증식 (수익 지향)</b></div></div><div><div class="sec-h"><span class="sec-num">02</span><span class="sec-ttl">입력할 조건</span></div><div class="sec-desc">다음 화면에서 아래 조건을 그대로 입력해 주세요</div><div class="sc-cond"><div class="sc-r"><span class="sc-k">투자 성향</span><span class="sc-v">적극투자형</span></div><div class="sc-r"><span class="sc-k">투자 기간</span><span class="sc-v">3년 이상</span></div><div class="sc-r"><span class="sc-k">투자 금액</span><span class="sc-v">500만원</span></div><div class="sc-r"><span class="sc-k">관심 업종</span><span class="sc-v">반도체, 2차전지</span></div><div class="sc-r"><span class="sc-k">목표 수익률</span><span class="sc-v">15%</span></div></div></div><div><div class="sec-h"><span class="sec-num">03</span><span class="sec-ttl">AI에게 알아낼 것</span></div><div class="sec-desc">채팅으로 아래 내용을 알아낸 뒤 마지막에 적어 주세요</div><ol class="gl big"><li>추천 1위 종목의 PER</li><li>세 종목 중 변동성이 가장 낮은 종목</li><li>추천 1위 종목의 목표 수익률 달성 가능성</li></ol></div><div class="sc-task"><div class="sc-task-t">진행 순서</div><div class="sc-step"><b>1</b>위 조건을 <em>직접 입력</em>하고 추천을 받습니다</div><div class="sc-step"><b>2</b>추천 종목 3개 중 설명 없이 <em>첫 선택</em>을 합니다</div><div class="sc-step"><b>3</b>AI에게 <em>자유롭게</em> 물어보며 알아낼 것을 찾습니다</div><div class="sc-step"><b>4</b>알아낸 내용과 <em>최종 선택</em>, 이유를 적습니다</div><div class="sc-tip">질문 내용과 순서는 자유입니다. 이 돈이 내 돈이라고 생각하고 신중하게 골라 주세요.</div></div><label class="cta" for="navI">조건 입력하러 가기 →</label></div></div><div class="pg navI"><div class="hd"><label class="back" for="nav0"><b>‹</b> 투자 상황 다시 보기</label><div class="hd-eye">AI STOCK ADVISOR</div><div class="hd-ttl">투자 조건을 입력하면<br>맞춤 종목을 추천해드려요</div><div class="hd-sub">5개 항목 · 약 1분</div></div><details class="gd cref" open><summary>입력할 조건 (투자 상황 카드)</summary><div class="cr"><div class="cr-r"><span>투자 성향</span><b>적극투자형</b></div><div class="cr-r"><span>투자 기간</span><b>3년 이상</b></div><div class="cr-r"><span>투자 금액</span><b>500만원</b></div><div class="cr-r"><span>관심 업종</span><b>반도체, 2차전지</b></div><div class="cr-r"><span>목표 수익률</span><b>15%</b></div></div></details><div class="body"><div><div class="sec-h"><span class="sec-num">01</span><span class="sec-ttl">투자 성향</span></div><div class="sec-desc">손실을 감당할 수 있는 정도</div><div class="olist"><label class="opt" for="r1"><span class="opt-t">안정형</span><span class="opt-s">원금 손실을 원하지 않음</span></label><label class="opt" for="r2"><span class="opt-t">안정추구형</span><span class="opt-s">손실은 최소로, 예금 이상 기대</span></label><label class="opt" for="r3"><span class="opt-t">위험중립형</span><span class="opt-s">수익 위해 일정 손실은 감수</span></label><label class="opt" for="r4"><span class="opt-t">적극투자형</span><span class="opt-s">손실 감수, 시장 평균 초과 추구</span></label><label class="opt" for="r5"><span class="opt-t">공격투자형</span><span class="opt-s">대부분을 위험자산에 투자</span></label></div></div><div><div class="sec-h"><span class="sec-num">02</span><span class="sec-ttl">투자 기간</span></div><div class="sec-desc">보유할 계획인 기간</div><div class="ogrid"><label class="opt" for="p1"><span class="opt-t">6개월 이내</span></label><label class="opt" for="p2"><span class="opt-t">6개월~1년</span></label><label class="opt" for="p3"><span class="opt-t">1~3년</span></label><label class="opt" for="p4"><span class="opt-t">3년 이상</span></label></div></div><div><div class="sec-h"><span class="sec-num">03</span><span class="sec-ttl">투자 금액</span></div><div class="sec-desc">대략적인 금액이면 충분합니다</div><div class="fld"><input class="memo" id="inpAmount" type="text" placeholder="직접 입력 (예: 800만원)"><span class="ovl ov-a1">300만원</span><span class="ovl ov-a2">1,000만원</span><span class="ovl ov-a3">3,000만원</span></div><div class="orow"><label class="chip" for="a1"><span class="opt-t">300만원</span></label><label class="chip" for="a2"><span class="opt-t">1,000만원</span></label><label class="chip" for="a3"><span class="opt-t">3,000만원</span></label></div></div><div><div class="sec-h"><span class="sec-num">04</span><span class="sec-ttl">관심 업종</span></div><div class="sec-desc">여러 개 선택할 수 있습니다</div><div class="fld"><input class="memo" id="inpSector" type="text" placeholder="직접 입력 (예: 반도체, 금융)"><span class="ovl multi ov-s1">반도체</span><span class="ovl multi ov-s2">2차전지</span><span class="ovl multi ov-s3">바이오</span><span class="ovl multi ov-s4">금융</span><span class="ovl multi ov-s5">IT</span></div><div class="orow"><label class="chip" for="s1"><span class="opt-t">반도체</span></label><label class="chip" for="s2"><span class="opt-t">2차전지</span></label><label class="chip" for="s3"><span class="opt-t">바이오</span></label><label class="chip" for="s4"><span class="opt-t">금융</span></label><label class="chip" for="s5"><span class="opt-t">IT</span></label></div></div><div><div class="sec-h"><span class="sec-num">05</span><span class="sec-ttl">목표 수익률</span></div><div class="sec-desc">1년 기준 기대 수익률</div><div class="fld"><input class="memo" id="inpTarget" type="text" placeholder="직접 입력 (예: 12%)"><span class="ovl ov-t1">5%</span><span class="ovl ov-t2">20%</span><span class="ovl ov-t3">30% 이상</span></div><div class="orow"><label class="chip" for="t1"><span class="opt-t">5%</span></label><label class="chip" for="t2"><span class="opt-t">20%</span></label><label class="chip" for="t3"><span class="opt-t">30% 이상</span></label></div></div><button type="button" class="cta" id="condGo">AI 맞춤 종목 추천받기 →</button><div class="cond-err" id="condErr" role="alert"></div><div class="cta-lock">투자 성향을 선택하면 추천이 시작됩니다</div><div class="note"><div class="note-l"><span class="badge">데이터</span><span class="note-t">위에서 입력하신 <b>5개 조건만</b> 추천에 사용하며, 계좌·거래내역·신상정보는 <b>수집하지 않습니다.</b></span></div><div class="note-l"><span class="badge rk">위험</span><span class="note-t">추천 결과는 과거 데이터에 기반한 <b>참고 정보일 뿐 수익을 보장하지 않으며</b>, 투자에 따른 손실 책임은 <b>투자자 본인에게 있습니다.</b></span></div></div></div></div>
+<div class="pg nav1"><div class="hd" style="padding-bottom:20px"><label class="back" for="navI"><b>‹</b> 조건 다시 입력</label><div class="hd-ttl" style="font-size:20px">AI 추천 투자 종목</div><div class="tags"><span class="tag">적극투자형</span><span class="tag">3년 이상</span><span class="tag">500만원</span><span class="tag">반도체, 2차전지</span><span class="tag">15%</span></div></div><div class="ic-box" id="icBox"><div class="ic-t">STEP 1 · 첫 선택</div><div class="ic-d">설명을 보기 전에, 지금 보이는 정보만으로 가장 마음에 드는 종목을 하나 골라 주세요.</div><div class="picks"><button type="button" class="pick" data-g="init" data-n="에코프로비엠"><span class="pick-r">1위</span>에코프로비엠</button><button type="button" class="pick" data-g="init" data-n="SK하이닉스"><span class="pick-r">2위</span>SK하이닉스</button><button type="button" class="pick" data-g="init" data-n="LG에너지솔루션"><span class="pick-r">3위</span>LG에너지솔루션</button></div></div><div class="ic-done" id="icDone"><div class="ic-t">STEP 2 · AI에게 물어보기</div><div class="ic-d">첫 선택: <b id="icName"></b> · 종목을 눌러 자유롭게 물어보며 아래 내용을 알아내 주세요.</div><ol class="gl sm"><li>추천 1위 종목의 PER</li><li>세 종목 중 변동성이 가장 낮은 종목</li><li>추천 1위 종목의 목표 수익률 달성 가능성</li></ol></div><div class="res-s"><div class="shd"><span class="shd-t">AI 추천 투자 종목</span><span class="shd-b">TOP 3</span></div><div class="cards"><label class="card" for="c_s_247540"><div class="c-top"><div class="c-mid"><div class="rank" style="background:#243484">1위</div><div class="c-name">에코프로비엠</div><div class="c-code">247540 · 2차전지/양극재</div><div class="c-why">최고 성장률, 높은 가격 부담</div></div><div class="c-rt"><div class="c-ret pos">+22.3%</div><div class="c-star">★★★★☆</div></div></div><div class="c-foot"><div class="mtx">조건 매칭 91%</div><div class="mbar"><div class="mfill" style="width:91%"></div></div></div></label><label class="card" for="c_s_000660"><div class="c-top"><div class="c-mid"><div class="rank" style="background:#4C5BA8">2위</div><div class="c-name">SK하이닉스</div><div class="c-code">000660 · 반도체/메모리</div><div class="c-why">꾸준한 성장, 낮은 가격 부담</div></div><div class="c-rt"><div class="c-ret pos">+14.1%</div><div class="c-star">★★★★☆</div></div></div><div class="c-foot"><div class="mtx">조건 매칭 88%</div><div class="mbar"><div class="mfill" style="width:88%"></div></div></div></label><label class="card" for="c_s_373220"><div class="c-top"><div class="c-mid"><div class="rank" style="background:#8F97C4">3위</div><div class="c-name">LG에너지솔루션</div><div class="c-code">373220 · 2차전지/배터리</div><div class="c-why">대형 배터리사, 성장 둔화</div></div><div class="c-rt"><div class="c-ret pos">+5.4%</div><div class="c-star">★★★☆☆</div></div></div><div class="c-foot"><div class="mtx">조건 매칭 76%</div><div class="mbar"><div class="mfill" style="width:76%"></div></div></div></label></div></div><div class="go-final"><label class="cta" for="nav2">STEP 3 · 답 적고 최종 선택하기 →</label></div></div><div class="pg nav2"><div class="hd" style="padding-bottom:20px"><label class="back" for="nav1"><b>‹</b> 더 알아보기</label><div class="hd-ttl" style="font-size:20px">답 적기 · 최종 선택</div><div class="hd-sub">알아낸 내용을 적고, 이 인물에게 가장 적합한 종목을 골라 주세요</div></div><div class="body"><div><div class="sec-h"><span class="sec-ttl" style="font-size:15px">알아낸 것</span></div><div class="sec-desc">채팅에서 찾은 내용을 적어 주세요</div><div class="gas"><div class="ga"><div class="ga-q"><b>1</b>추천 1위 종목의 PER</div><input class="ga-i" id="ga1" type="text" placeholder="알아낸 내용 (모르면 '모름')"></div><div class="ga"><div class="ga-q"><b>2</b>세 종목 중 변동성이 가장 낮은 종목</div><input class="ga-i" id="ga2" type="text" placeholder="알아낸 내용 (모르면 '모름')"></div><div class="ga"><div class="ga-q"><b>3</b>추천 1위 종목의 목표 수익률 달성 가능성</div><input class="ga-i" id="ga3" type="text" placeholder="알아낸 내용 (모르면 '모름')"></div></div></div><div><div class="sec-h"><span class="sec-ttl" style="font-size:15px">최종 선택</span></div><div class="picks col" style="margin-top:12px"><button type="button" class="pick" data-g="final" data-n="에코프로비엠"><span class="pick-r">1위</span>에코프로비엠</button><button type="button" class="pick" data-g="final" data-n="SK하이닉스"><span class="pick-r">2위</span>SK하이닉스</button><button type="button" class="pick" data-g="final" data-n="LG에너지솔루션"><span class="pick-r">3위</span>LG에너지솔루션</button></div></div><div><div class="sec-h"><span class="sec-ttl" style="font-size:15px">선택한 이유</span></div><div class="sec-desc">한두 문장으로 적어 주세요</div><textarea id="finReason" class="fin-r" rows="3" placeholder="예: 변동성이 낮아 이 인물의 목표에 맞다고 생각했어요"></textarea></div><button type="button" class="cta fin-go" id="finGo" disabled>제출하기</button></div></div><div class="pg nav3"><div class="hd"><div class="hd-eye">완료</div><div class="hd-ttl">과제를 마쳤습니다</div><div class="hd-sub">연구자의 안내에 따라 설문을 작성해 주세요.</div></div><div class="body"><div class="done-c">수고하셨습니다. 화면을 그대로 두고 연구자에게 알려 주세요.</div><div id="rsPanel" class="rs" style="display:none"><div class="rs-t">연구자용 기록</div><textarea id="rsOut" class="rs-o" rows="12" readonly></textarea><button type="button" class="cta" id="rsCopy" style="padding:12px;font-size:13px">기록 복사</button></div></div></div><div class="pg cht c_s_247540"><div class="chd"><label class="back" for="nav1"><b>‹</b> 추천 목록으로</label><div class="chd-r"><div style="flex:1;min-width:0"><div class="chd-n">에코프로비엠</div><div class="chd-c">247540 · 매칭 91%</div></div><div style="text-align:right"><div class="chd-v">+22.3%</div><div class="chd-c">3개월 수익률</div></div></div></div><details class="gd"><summary>알아낼 것 3가지 보기</summary><ol class="gl"><li>추천 1위 종목의 PER</li><li>세 종목 중 변동성이 가장 낮은 종목</li><li>추천 1위 종목의 목표 수익률 달성 가능성</li></ol></details><div class="chat"><div class="hint">궁금한 점을 아래 입력창에 자유롭게 물어보세요.</div><div class="exq" aria-label="예시 질문"><div class="eq-l">예시</div><div class="eq">내 조건에 왜 이 종목이 추천됐어요?</div><div class="eq">이 종목은 어떤 위험이 있어요?</div><div class="eq">비슷한 다른 종목이랑 비교해 줄래요?</div></div><div class="ex q_s_247540_reason"><div class="mu"><div class="bu">내 조건에 왜 이 종목이 맞아요?</div></div><div class="ma"><div class="av">AI</div><div class="aw"><div class="bt"><span class="sl">에코프로비엠은 매출 성장률이 추천 종목 중 가장 높아 자본 증식 목표와 잘 맞습니다.</span><span class="sl">다만 PER과 변동성도 추천 종목 중 가장 높아 가격 부담이 큰 종목입니다.</span></div><div class="crd"><div class="crd-t">수치 비교</div><div class="br"><div class="br-l">수익률</div><div class="br-t"><div class="br-f" style="width:89.2%;background:#243484"></div></div><div class="br-v" style="color:#243484">+22.3%</div></div><div class="br"><div class="br-l">안정성</div><div class="br-t"><div class="br-f" style="width:15.0%;background:#4C5BA8"></div></div><div class="br-v" style="color:#4C5BA8">매우 낮음</div></div><div class="br"><div class="br-l">목표 달성</div><div class="br-t"><div class="br-f" style="width:85.0%;background:#243484"></div></div><div class="br-v" style="color:#243484">높음</div></div><div class="br"><div class="br-l">매칭도</div><div class="br-t"><div class="br-f" style="width:91.0%;background:#243484"></div></div><div class="br-v" style="color:#243484">91%</div></div></div><div class="src">출처 · 한국거래소(KRX) / 금융감독원 DART / 증권사 리서치 (실험용 가상 수치)</div></div></div></div><div class="ex q_s_247540_risk"><div class="mu"><div class="bu">위험하지 않나요?</div></div><div class="ma"><div class="av">AI</div><div class="aw"><div class="bt"><span class="sl">에코프로비엠의 주요 위험 요인은 전기차 수요 둔화, 원자재 가격 변동, 높은 PER 부담입니다.</span><span class="sl">변동성은 매우 높음, 위험도는 높음 수준입니다.</span></div><div class="crd"><div class="crd-t">수치 비교</div><div class="br"><div class="br-l">변동성</div><div class="br-t"><div class="br-f" style="width:92.0%;background:#243484"></div></div><div class="br-v" style="color:#243484">매우 높음</div></div><div class="br"><div class="br-l">위험도</div><div class="br-t"><div class="br-f" style="width:75.0%;background:#C23A4B"></div></div><div class="br-v" style="color:#C23A4B">높음</div></div></div><div class="src">출처 · 한국거래소(KRX) / 금융감독원 DART (실험용 가상 수치)</div></div></div></div><div class="ex q_s_247540_compare"><div class="mu"><div class="bu">다른 종목이랑 비교해줘</div></div><div class="ma"><div class="av">AI</div><div class="aw"><div class="bt"><span class="sl">에코프로비엠을 같은 추천 목록의 다른 두 종목과 비교합니다.</span><span class="sl">비교 항목은 수익률·변동성·가치·배당·목표 달성 가능성·조건 매칭입니다.</span></div><div><div class="crd-t" style="padding:0 0 9px">종목 비교</div><div class="tbl"><div class="th"><div class="th-l">항목</div><div class="th-c"><span class="th-b cur">현재</span><span class="th-n">에코프로비엠</span></div><div class="th-c"><span class="th-b alt">비교</span><span class="th-n">SK하이닉스</span></div><div class="th-c"><span class="th-b alt">비교</span><span class="th-n">LG에너지솔루션</span></div></div><div class="tr"><div class="td-l">3개월 수익</div><div class="td a">+22.3%</div><div class="td a">+14.1%</div><div class="td a">+5.4%</div></div><div class="tr"><div class="td-l">변동성</div><div class="td r">매우 높음</div><div class="td g">보통</div><div class="td r">높음</div></div><div class="tr"><div class="td-l">PER</div><div class="td b">45.2배</div><div class="td b">18.7배</div><div class="td b">38.5배</div></div><div class="tr"><div class="td-l">배당수익률</div><div class="td g">0~0.5%</div><div class="td g">0.5~1%</div><div class="td g">0%</div></div><div class="tr"><div class="td-l">목표 달성</div><div class="td g">높음</div><div class="td g">보통</div><div class="td g">낮음</div></div><div class="tr"><div class="td-l">조건 매칭</div><div class="td g">91%</div><div class="td g">88%</div><div class="td g">76%</div></div></div></div><div class="why"><div class="why-t">비교 대상</div><div class="why-r"><span class="why-n">SK하이닉스</span><span class="why-x">같은 추천 목록의 종목입니다 (조건 매칭 88%, 에코프로비엠 대비 -3%p)</span></div><div class="why-r"><span class="why-n">LG에너지솔루션</span><span class="why-x">같은 추천 목록의 종목입니다 (조건 매칭 76%, 에코프로비엠 대비 -15%p)</span></div></div><div class="src">출처 · 한국거래소(KRX) / 증권사 리서치 (실험용 가상 수치)</div></div></div></div><div class="ex q_s_247540_transparency"><div class="mu"><div class="bu">내 정보를 어떻게 사용했어요?</div></div><div class="ma"><div class="av">AI</div><div class="aw"><div class="bt">이 AI가 사용한 데이터와 분석 방식을 투명하게 안내드립니다.</div><div class="tc"><div class="tc-t">정보 사용 투명성</div><div class="tc-i"><span style="color:#243484">·</span>주가 데이터: 한국거래소(KRX) 시세 기준</div><div class="tc-i"><span style="color:#243484">·</span>재무 데이터: 금융감독원 DART 공시 자료</div><div class="tc-i"><span style="color:#243484">·</span>PER 비교: 증권사 리서치 업종 평균</div><div class="tc-i"><span style="color:#243484">·</span>매칭 분석: 시나리오의 투자 조건(성향·기간·금액·업종·목표 수익률) 기반</div><div class="tc-i"><span style="color:#243484">·</span>개인 신상정보·계좌정보·거래내역은 수집하지 않습니다</div><div class="tc-i"><span style="color:#243484">·</span>이 대화는 연구 목적으로만 사용됩니다</div><div class="tc-i j-typed" style="display:none"></div></div><div class="src">출처 · 한국거래소 / 금융감독원 DART / 증권사 리서치</div></div></div></div><div class="ex q_s_247540_dividend"><div class="mu"><div class="bu">배당은 어때요?</div></div><div class="ma"><div class="av">AI</div><div class="aw"><div class="bt"><span class="sl">에코프로비엠의 배당 정보입니다.</span><span class="sl">배당수익률과 배당성향은 아래와 같습니다.</span></div><div class="crd"><div class="crd-t">수치 비교</div><div class="br"><div class="br-l">배당수익률</div><div class="br-t"><div class="br-f" style="width:5.0%;background:#243484"></div></div><div class="br-v" style="color:#243484">0~0.5%</div></div><div class="br"><div class="br-l">배당성향</div><div class="br-t"><div class="br-f" style="width:10.0%;background:#4C5BA8"></div></div><div class="br-v" style="color:#4C5BA8">5~10%</div></div></div><div class="bt" style="background:#F5F7FC"><span class="sl">에코프로비엠은 이익 대부분을 설비 투자에 사용해 배당이 거의 없습니다.</span><span class="sl">배당금을 받으려면 배당 기준일까지 주식을 보유해야 합니다.</span></div><div class="src">출처 · 금융감독원 DART 공시 / 각사 IR 자료 (실험용 가상 수치)</div></div></div></div><div class="ex q_s_247540_fundamental"><div class="mu"><div class="bu">재무 지표 알려주세요</div></div><div class="ma"><div class="av">AI</div><div class="aw"><div class="bt"><span class="sl">에코프로비엠의 주요 재무 지표입니다.</span><span class="sl">PER·ROE·영업이익률·매출 성장률은 아래와 같습니다.</span></div><div class="crd"><div class="crd-t">수치 비교</div><div class="br"><div class="br-l">PER</div><div class="br-t"><div class="br-f" style="width:75.3%;background:#4C5BA8"></div></div><div class="br-v" style="color:#4C5BA8">45.2배</div></div><div class="br"><div class="br-l">ROE</div><div class="br-t"><div class="br-f" style="width:40.0%;background:#243484"></div></div><div class="br-v" style="color:#243484">8%</div></div><div class="br"><div class="br-l">영업이익률</div><div class="br-t"><div class="br-f" style="width:12.5%;background:#243484"></div></div><div class="br-v" style="color:#243484">5%</div></div><div class="br"><div class="br-l">매출 성장률</div><div class="br-t"><div class="br-f" style="width:87.5%;background:#243484"></div></div><div class="br-v" style="color:#243484">35%</div></div></div><div class="bt" style="background:#F5F7FC">업종 평균 PER은 30.0배입니다.</div><div class="src">출처 · 금융감독원 DART / 에프앤가이드 / 증권사 리서치 (실험용 가상 수치)</div></div></div></div><div class="ex fq_s_247540"><div class="mu"><div class="bu">직접 입력한 질문</div></div><div class="ma"><div class="av">AI</div><div class="aw"><div class="bt"><span class="sl">지금은 이 질문에 대한 답변을 만들 수 없습니다.</span><span class="sl">추천 이유, 위험, 다른 종목과 비교, 배당, 재무 지표, 정보 사용에 대해서는 바로 답변드릴 수 있습니다.</span></div></div></div></div></div><div class="ibar"><input class="cinp" type="text" placeholder="궁금한 것을 자유롭게 물어보세요"><button type="button" class="snd" data-c="s_247540" aria-label="질문 보내기">↑</button></div></div><div class="pg cht c_s_000660"><div class="chd"><label class="back" for="nav1"><b>‹</b> 추천 목록으로</label><div class="chd-r"><div style="flex:1;min-width:0"><div class="chd-n">SK하이닉스</div><div class="chd-c">000660 · 매칭 88%</div></div><div style="text-align:right"><div class="chd-v">+14.1%</div><div class="chd-c">3개월 수익률</div></div></div></div><details class="gd"><summary>알아낼 것 3가지 보기</summary><ol class="gl"><li>추천 1위 종목의 PER</li><li>세 종목 중 변동성이 가장 낮은 종목</li><li>추천 1위 종목의 목표 수익률 달성 가능성</li></ol></details><div class="chat"><div class="hint">궁금한 점을 아래 입력창에 자유롭게 물어보세요.</div><div class="exq" aria-label="예시 질문"><div class="eq-l">예시</div><div class="eq">내 조건에 왜 이 종목이 추천됐어요?</div><div class="eq">이 종목은 어떤 위험이 있어요?</div><div class="eq">비슷한 다른 종목이랑 비교해 줄래요?</div></div><div class="ex q_s_000660_reason"><div class="mu"><div class="bu">내 조건에 왜 이 종목이 맞아요?</div></div><div class="ma"><div class="av">AI</div><div class="aw"><div class="bt"><span class="sl">SK하이닉스는 반도체 업황 회복으로 성장세가 이어지고 있어 자본 증식 목표와 잘 맞습니다.</span><span class="sl">성장률은 1위보다 낮지만 PER과 변동성이 낮아 가격 부담이 적습니다.</span></div><div class="crd"><div class="crd-t">수치 비교</div><div class="br"><div class="br-l">수익률</div><div class="br-t"><div class="br-f" style="width:56.4%;background:#243484"></div></div><div class="br-v" style="color:#243484">+14.1%</div></div><div class="br"><div class="br-l">안정성</div><div class="br-t"><div class="br-f" style="width:55.0%;background:#4C5BA8"></div></div><div class="br-v" style="color:#4C5BA8">보통</div></div><div class="br"><div class="br-l">목표 달성</div><div class="br-t"><div class="br-f" style="width:55.0%;background:#243484"></div></div><div class="br-v" style="color:#243484">보통</div></div><div class="br"><div class="br-l">매칭도</div><div class="br-t"><div class="br-f" style="width:88.0%;background:#243484"></div></div><div class="br-v" style="color:#243484">88%</div></div></div><div class="src">출처 · 한국거래소(KRX) / 금융감독원 DART / 증권사 리서치 (실험용 가상 수치)</div></div></div></div><div class="ex q_s_000660_risk"><div class="mu"><div class="bu">위험하지 않나요?</div></div><div class="ma"><div class="av">AI</div><div class="aw"><div class="bt"><span class="sl">SK하이닉스의 주요 위험 요인은 메모리 반도체 가격 변동, 업황 사이클입니다.</span><span class="sl">변동성은 보통, 위험도는 보통 수준입니다.</span></div><div class="crd"><div class="crd-t">수치 비교</div><div class="br"><div class="br-l">변동성</div><div class="br-t"><div class="br-f" style="width:50.0%;background:#243484"></div></div><div class="br-v" style="color:#243484">보통</div></div><div class="br"><div class="br-l">위험도</div><div class="br-t"><div class="br-f" style="width:50.0%;background:#C23A4B"></div></div><div class="br-v" style="color:#C23A4B">보통</div></div></div><div class="src">출처 · 한국거래소(KRX) / 금융감독원 DART (실험용 가상 수치)</div></div></div></div><div class="ex q_s_000660_compare"><div class="mu"><div class="bu">다른 종목이랑 비교해줘</div></div><div class="ma"><div class="av">AI</div><div class="aw"><div class="bt"><span class="sl">SK하이닉스를 같은 추천 목록의 다른 두 종목과 비교합니다.</span><span class="sl">비교 항목은 수익률·변동성·가치·배당·목표 달성 가능성·조건 매칭입니다.</span></div><div><div class="crd-t" style="padding:0 0 9px">종목 비교</div><div class="tbl"><div class="th"><div class="th-l">항목</div><div class="th-c"><span class="th-b cur">현재</span><span class="th-n">SK하이닉스</span></div><div class="th-c"><span class="th-b alt">비교</span><span class="th-n">에코프로비엠</span></div><div class="th-c"><span class="th-b alt">비교</span><span class="th-n">LG에너지솔루션</span></div></div><div class="tr"><div class="td-l">3개월 수익</div><div class="td a">+14.1%</div><div class="td a">+22.3%</div><div class="td a">+5.4%</div></div><div class="tr"><div class="td-l">변동성</div><div class="td g">보통</div><div class="td r">매우 높음</div><div class="td r">높음</div></div><div class="tr"><div class="td-l">PER</div><div class="td b">18.7배</div><div class="td b">45.2배</div><div class="td b">38.5배</div></div><div class="tr"><div class="td-l">배당수익률</div><div class="td g">0.5~1%</div><div class="td g">0~0.5%</div><div class="td g">0%</div></div><div class="tr"><div class="td-l">목표 달성</div><div class="td g">보통</div><div class="td g">높음</div><div class="td g">낮음</div></div><div class="tr"><div class="td-l">조건 매칭</div><div class="td g">88%</div><div class="td g">91%</div><div class="td g">76%</div></div></div></div><div class="why"><div class="why-t">비교 대상</div><div class="why-r"><span class="why-n">에코프로비엠</span><span class="why-x">같은 추천 목록의 종목입니다 (조건 매칭 91%, SK하이닉스 대비 +3%p)</span></div><div class="why-r"><span class="why-n">LG에너지솔루션</span><span class="why-x">같은 추천 목록의 종목입니다 (조건 매칭 76%, SK하이닉스 대비 -12%p)</span></div></div><div class="src">출처 · 한국거래소(KRX) / 증권사 리서치 (실험용 가상 수치)</div></div></div></div><div class="ex q_s_000660_transparency"><div class="mu"><div class="bu">내 정보를 어떻게 사용했어요?</div></div><div class="ma"><div class="av">AI</div><div class="aw"><div class="bt">이 AI가 사용한 데이터와 분석 방식을 투명하게 안내드립니다.</div><div class="tc"><div class="tc-t">정보 사용 투명성</div><div class="tc-i"><span style="color:#243484">·</span>주가 데이터: 한국거래소(KRX) 시세 기준</div><div class="tc-i"><span style="color:#243484">·</span>재무 데이터: 금융감독원 DART 공시 자료</div><div class="tc-i"><span style="color:#243484">·</span>PER 비교: 증권사 리서치 업종 평균</div><div class="tc-i"><span style="color:#243484">·</span>매칭 분석: 시나리오의 투자 조건(성향·기간·금액·업종·목표 수익률) 기반</div><div class="tc-i"><span style="color:#243484">·</span>개인 신상정보·계좌정보·거래내역은 수집하지 않습니다</div><div class="tc-i"><span style="color:#243484">·</span>이 대화는 연구 목적으로만 사용됩니다</div><div class="tc-i j-typed" style="display:none"></div></div><div class="src">출처 · 한국거래소 / 금융감독원 DART / 증권사 리서치</div></div></div></div><div class="ex q_s_000660_dividend"><div class="mu"><div class="bu">배당은 어때요?</div></div><div class="ma"><div class="av">AI</div><div class="aw"><div class="bt"><span class="sl">SK하이닉스의 배당 정보입니다.</span><span class="sl">배당수익률과 배당성향은 아래와 같습니다.</span></div><div class="crd"><div class="crd-t">수치 비교</div><div class="br"><div class="br-l">배당수익률</div><div class="br-t"><div class="br-f" style="width:15.0%;background:#243484"></div></div><div class="br-v" style="color:#243484">0.5~1%</div></div><div class="br"><div class="br-l">배당성향</div><div class="br-t"><div class="br-f" style="width:20.0%;background:#4C5BA8"></div></div><div class="br-v" style="color:#4C5BA8">10~15%</div></div></div><div class="bt" style="background:#F5F7FC"><span class="sl">SK하이닉스는 분기 배당을 지급하지만 배당수익률은 낮은 편입니다.</span><span class="sl">배당금을 받으려면 배당 기준일까지 주식을 보유해야 합니다.</span></div><div class="src">출처 · 금융감독원 DART 공시 / 각사 IR 자료 (실험용 가상 수치)</div></div></div></div><div class="ex q_s_000660_fundamental"><div class="mu"><div class="bu">재무 지표 알려주세요</div></div><div class="ma"><div class="av">AI</div><div class="aw"><div class="bt"><span class="sl">SK하이닉스의 주요 재무 지표입니다.</span><span class="sl">PER·ROE·영업이익률·매출 성장률은 아래와 같습니다.</span></div><div class="crd"><div class="crd-t">수치 비교</div><div class="br"><div class="br-l">PER</div><div class="br-t"><div class="br-f" style="width:31.2%;background:#4C5BA8"></div></div><div class="br-v" style="color:#4C5BA8">18.7배</div></div><div class="br"><div class="br-l">ROE</div><div class="br-t"><div class="br-f" style="width:75.0%;background:#243484"></div></div><div class="br-v" style="color:#243484">15%</div></div><div class="br"><div class="br-l">영업이익률</div><div class="br-t"><div class="br-f" style="width:50.0%;background:#243484"></div></div><div class="br-v" style="color:#243484">20%</div></div><div class="br"><div class="br-l">매출 성장률</div><div class="br-t"><div class="br-f" style="width:45.0%;background:#243484"></div></div><div class="br-v" style="color:#243484">18%</div></div></div><div class="bt" style="background:#F5F7FC">업종 평균 PER은 20.0배입니다.</div><div class="src">출처 · 금융감독원 DART / 에프앤가이드 / 증권사 리서치 (실험용 가상 수치)</div></div></div></div><div class="ex fq_s_000660"><div class="mu"><div class="bu">직접 입력한 질문</div></div><div class="ma"><div class="av">AI</div><div class="aw"><div class="bt"><span class="sl">지금은 이 질문에 대한 답변을 만들 수 없습니다.</span><span class="sl">추천 이유, 위험, 다른 종목과 비교, 배당, 재무 지표, 정보 사용에 대해서는 바로 답변드릴 수 있습니다.</span></div></div></div></div></div><div class="ibar"><input class="cinp" type="text" placeholder="궁금한 것을 자유롭게 물어보세요"><button type="button" class="snd" data-c="s_000660" aria-label="질문 보내기">↑</button></div></div><div class="pg cht c_s_373220"><div class="chd"><label class="back" for="nav1"><b>‹</b> 추천 목록으로</label><div class="chd-r"><div style="flex:1;min-width:0"><div class="chd-n">LG에너지솔루션</div><div class="chd-c">373220 · 매칭 76%</div></div><div style="text-align:right"><div class="chd-v">+5.4%</div><div class="chd-c">3개월 수익률</div></div></div></div><details class="gd"><summary>알아낼 것 3가지 보기</summary><ol class="gl"><li>추천 1위 종목의 PER</li><li>세 종목 중 변동성이 가장 낮은 종목</li><li>추천 1위 종목의 목표 수익률 달성 가능성</li></ol></details><div class="chat"><div class="hint">궁금한 점을 아래 입력창에 자유롭게 물어보세요.</div><div class="exq" aria-label="예시 질문"><div class="eq-l">예시</div><div class="eq">내 조건에 왜 이 종목이 추천됐어요?</div><div class="eq">이 종목은 어떤 위험이 있어요?</div><div class="eq">비슷한 다른 종목이랑 비교해 줄래요?</div></div><div class="ex q_s_373220_reason"><div class="mu"><div class="bu">내 조건에 왜 이 종목이 맞아요?</div></div><div class="ma"><div class="av">AI</div><div class="aw"><div class="bt"><span class="sl">LG에너지솔루션은 글로벌 배터리 점유율이 높은 대형 종목입니다.</span><span class="sl">최근 성장률이 둔화되어 목표 수익률 연 15% 달성 가능성은 낮은 편입니다.</span></div><div class="crd"><div class="crd-t">수치 비교</div><div class="br"><div class="br-l">수익률</div><div class="br-t"><div class="br-f" style="width:21.6%;background:#243484"></div></div><div class="br-v" style="color:#243484">+5.4%</div></div><div class="br"><div class="br-l">안정성</div><div class="br-t"><div class="br-f" style="width:30.0%;background:#4C5BA8"></div></div><div class="br-v" style="color:#4C5BA8">낮음</div></div><div class="br"><div class="br-l">목표 달성</div><div class="br-t"><div class="br-f" style="width:25.0%;background:#243484"></div></div><div class="br-v" style="color:#243484">낮음</div></div><div class="br"><div class="br-l">매칭도</div><div class="br-t"><div class="br-f" style="width:76.0%;background:#243484"></div></div><div class="br-v" style="color:#243484">76%</div></div></div><div class="src">출처 · 한국거래소(KRX) / 금융감독원 DART / 증권사 리서치 (실험용 가상 수치)</div></div></div></div><div class="ex q_s_373220_risk"><div class="mu"><div class="bu">위험하지 않나요?</div></div><div class="ma"><div class="av">AI</div><div class="aw"><div class="bt"><span class="sl">LG에너지솔루션의 주요 위험 요인은 전기차 수요 둔화, 수주 단가 하락입니다.</span><span class="sl">변동성은 높음, 위험도는 보통 수준입니다.</span></div><div class="crd"><div class="crd-t">수치 비교</div><div class="br"><div class="br-l">변동성</div><div class="br-t"><div class="br-f" style="width:75.0%;background:#243484"></div></div><div class="br-v" style="color:#243484">높음</div></div><div class="br"><div class="br-l">위험도</div><div class="br-t"><div class="br-f" style="width:50.0%;background:#C23A4B"></div></div><div class="br-v" style="color:#C23A4B">보통</div></div></div><div class="src">출처 · 한국거래소(KRX) / 금융감독원 DART (실험용 가상 수치)</div></div></div></div><div class="ex q_s_373220_compare"><div class="mu"><div class="bu">다른 종목이랑 비교해줘</div></div><div class="ma"><div class="av">AI</div><div class="aw"><div class="bt"><span class="sl">LG에너지솔루션을 같은 추천 목록의 다른 두 종목과 비교합니다.</span><span class="sl">비교 항목은 수익률·변동성·가치·배당·목표 달성 가능성·조건 매칭입니다.</span></div><div><div class="crd-t" style="padding:0 0 9px">종목 비교</div><div class="tbl"><div class="th"><div class="th-l">항목</div><div class="th-c"><span class="th-b cur">현재</span><span class="th-n">LG에너지솔루션</span></div><div class="th-c"><span class="th-b alt">비교</span><span class="th-n">에코프로비엠</span></div><div class="th-c"><span class="th-b alt">비교</span><span class="th-n">SK하이닉스</span></div></div><div class="tr"><div class="td-l">3개월 수익</div><div class="td a">+5.4%</div><div class="td a">+22.3%</div><div class="td a">+14.1%</div></div><div class="tr"><div class="td-l">변동성</div><div class="td r">높음</div><div class="td r">매우 높음</div><div class="td g">보통</div></div><div class="tr"><div class="td-l">PER</div><div class="td b">38.5배</div><div class="td b">45.2배</div><div class="td b">18.7배</div></div><div class="tr"><div class="td-l">배당수익률</div><div class="td g">0%</div><div class="td g">0~0.5%</div><div class="td g">0.5~1%</div></div><div class="tr"><div class="td-l">목표 달성</div><div class="td g">낮음</div><div class="td g">높음</div><div class="td g">보통</div></div><div class="tr"><div class="td-l">조건 매칭</div><div class="td g">76%</div><div class="td g">91%</div><div class="td g">88%</div></div></div></div><div class="why"><div class="why-t">비교 대상</div><div class="why-r"><span class="why-n">에코프로비엠</span><span class="why-x">같은 추천 목록의 종목입니다 (조건 매칭 91%, LG에너지솔루션 대비 +15%p)</span></div><div class="why-r"><span class="why-n">SK하이닉스</span><span class="why-x">같은 추천 목록의 종목입니다 (조건 매칭 88%, LG에너지솔루션 대비 +12%p)</span></div></div><div class="src">출처 · 한국거래소(KRX) / 증권사 리서치 (실험용 가상 수치)</div></div></div></div><div class="ex q_s_373220_transparency"><div class="mu"><div class="bu">내 정보를 어떻게 사용했어요?</div></div><div class="ma"><div class="av">AI</div><div class="aw"><div class="bt">이 AI가 사용한 데이터와 분석 방식을 투명하게 안내드립니다.</div><div class="tc"><div class="tc-t">정보 사용 투명성</div><div class="tc-i"><span style="color:#243484">·</span>주가 데이터: 한국거래소(KRX) 시세 기준</div><div class="tc-i"><span style="color:#243484">·</span>재무 데이터: 금융감독원 DART 공시 자료</div><div class="tc-i"><span style="color:#243484">·</span>PER 비교: 증권사 리서치 업종 평균</div><div class="tc-i"><span style="color:#243484">·</span>매칭 분석: 시나리오의 투자 조건(성향·기간·금액·업종·목표 수익률) 기반</div><div class="tc-i"><span style="color:#243484">·</span>개인 신상정보·계좌정보·거래내역은 수집하지 않습니다</div><div class="tc-i"><span style="color:#243484">·</span>이 대화는 연구 목적으로만 사용됩니다</div><div class="tc-i j-typed" style="display:none"></div></div><div class="src">출처 · 한국거래소 / 금융감독원 DART / 증권사 리서치</div></div></div></div><div class="ex q_s_373220_dividend"><div class="mu"><div class="bu">배당은 어때요?</div></div><div class="ma"><div class="av">AI</div><div class="aw"><div class="bt"><span class="sl">LG에너지솔루션의 배당 정보입니다.</span><span class="sl">배당수익률과 배당성향은 아래와 같습니다.</span></div><div class="crd"><div class="crd-t">수치 비교</div><div class="br"><div class="br-l">배당수익률</div><div class="br-t"><div class="br-f" style="width:2.0%;background:#243484"></div></div><div class="br-v" style="color:#243484">0%</div></div><div class="br"><div class="br-l">배당성향</div><div class="br-t"><div class="br-f" style="width:2.0%;background:#4C5BA8"></div></div><div class="br-v" style="color:#4C5BA8">0%</div></div></div><div class="bt" style="background:#F5F7FC"><span class="sl">LG에너지솔루션은 현재 배당을 지급하지 않습니다.</span><span class="sl">배당금을 받으려면 배당 기준일까지 주식을 보유해야 합니다.</span></div><div class="src">출처 · 금융감독원 DART 공시 / 각사 IR 자료 (실험용 가상 수치)</div></div></div></div><div class="ex q_s_373220_fundamental"><div class="mu"><div class="bu">재무 지표 알려주세요</div></div><div class="ma"><div class="av">AI</div><div class="aw"><div class="bt"><span class="sl">LG에너지솔루션의 주요 재무 지표입니다.</span><span class="sl">PER·ROE·영업이익률·매출 성장률은 아래와 같습니다.</span></div><div class="crd"><div class="crd-t">수치 비교</div><div class="br"><div class="br-l">PER</div><div class="br-t"><div class="br-f" style="width:64.2%;background:#4C5BA8"></div></div><div class="br-v" style="color:#4C5BA8">38.5배</div></div><div class="br"><div class="br-l">ROE</div><div class="br-t"><div class="br-f" style="width:20.0%;background:#243484"></div></div><div class="br-v" style="color:#243484">4%</div></div><div class="br"><div class="br-l">영업이익률</div><div class="br-t"><div class="br-f" style="width:7.5%;background:#243484"></div></div><div class="br-v" style="color:#243484">3%</div></div><div class="br"><div class="br-l">매출 성장률</div><div class="br-t"><div class="br-f" style="width:20.0%;background:#243484"></div></div><div class="br-v" style="color:#243484">8%</div></div></div><div class="bt" style="background:#F5F7FC">업종 평균 PER은 30.0배입니다.</div><div class="src">출처 · 금융감독원 DART / 에프앤가이드 / 증권사 리서치 (실험용 가상 수치)</div></div></div></div><div class="ex fq_s_373220"><div class="mu"><div class="bu">직접 입력한 질문</div></div><div class="ma"><div class="av">AI</div><div class="aw"><div class="bt"><span class="sl">지금은 이 질문에 대한 답변을 만들 수 없습니다.</span><span class="sl">추천 이유, 위험, 다른 종목과 비교, 배당, 재무 지표, 정보 사용에 대해서는 바로 답변드릴 수 있습니다.</span></div></div></div></div></div><div class="ibar"><input class="cinp" type="text" placeholder="궁금한 것을 자유롭게 물어보세요"><button type="button" class="snd" data-c="s_373220" aria-label="질문 보내기">↑</button></div></div>
+</div>
+<script>
+(function(){
+  "use strict";
+  try{
+    var d=document; var SCN_META={"userCond": "시나리오 인물: 30대 직장인\n상황: 당장 쓸 일이 없는 여유자금을 오래 운용해 자산을 키우고 싶습니다.\n투자 성향: 적극투자형\n투자 기간: 3년 이상\n투자 금액: 500만원\n관심 업종: 반도체, 2차전지\n목표 수익률: 15%\n투자 목적: 자본 증식 (수익 지향)"};
+    function $(id){return d.getElementById(id);}
+    function txt(el,v){if(el)el.textContent=v;}
+
+    /* ── 1) 입력칸 ↔ 칩 동기화 + 조건 태그·투명성 답변 반영 ── */
+    var amt=$("inpAmount"), sec=$("inpSector"), tgt=$("inpTarget");
+    function norm(v){return (v||"").replace(/[\s,]/g,"");}
+    function chipText(id){var l=d.querySelector('label[for="'+id+'"] .opt-t');return l?l.textContent.trim():"";}
+    var AMT=["a1","a2","a3"], TGT=["t1","t2","t3"], SEC=["s1","s2","s3","s4","s5"];
+    function secTokens(){return (sec&&sec.value||"").split(/[,，、\/]+/).map(function(x){return x.trim();}).filter(Boolean);}
+    function secChipNames(){return SEC.map(chipText);}
+    function customSec(){var n=secChipNames().map(norm);return secTokens().filter(function(x){return n.indexOf(norm(x))<0;});}
+    function anyChecked(ids){for(var i=0;i<ids.length;i++){var e=$(ids[i]);if(e&&e.checked)return true;}return false;}
+
+    /* 칩 선택 → 입력칸에 값 채우기 (예시 문구는 값이 생기면 자동으로 사라짐) */
+    function chipToInput(ids,inp){for(var i=0;i<ids.length;i++){var e=$(ids[i]);if(e&&e.checked){inp.value=chipText(ids[i]);return;}}}
+    function chipsToSector(){
+      if(!sec) return;
+      var picked=[];for(var i=0;i<SEC.length;i++){var e=$(SEC[i]);if(e&&e.checked)picked.push(chipText(SEC[i]));}
+      sec.value=picked.concat(customSec()).join(", ");
+    }
+    /* 직접 입력 → 일치하는 칩 자동 선택/해제 */
+    function inputToChip(ids,inp){var v=norm(inp.value);for(var i=0;i<ids.length;i++){var e=$(ids[i]);if(e)e.checked=(v!==""&&norm(chipText(ids[i]))===v);}}
+    function sectorToChips(){var t=secTokens().map(norm);for(var i=0;i<SEC.length;i++){var e=$(SEC[i]);if(e)e.checked=t.indexOf(norm(chipText(SEC[i])))>=0;}}
+
+    function refresh(){
+      var a=amt&&amt.value.trim(), t=tgt&&tgt.value.trim(), cs=customSec();
+      var ta=$("tagAmt"), tt=$("tagTgt"), ts=$("tagSec");
+      var showA=a&&!anyChecked(AMT), showT=t&&!anyChecked(TGT);
+      if(ta){ ta.textContent=a; ta.style.display=showA?"inline-block":"none"; }
+      if(tt){ tt.textContent="목표 "+t; tt.style.display=showT?"inline-block":"none"; }
+      if(ts){ ts.innerHTML=""; cs.forEach(function(x){var sp=d.createElement("span");sp.className="tag";sp.style.display="inline-block";sp.textContent=x;ts.appendChild(sp);}); }
+      var lines=d.getElementsByClassName("j-typed");
+      for(var i=0;i<lines.length;i++){
+        var parts=[];
+        if(showA) parts.push("금액 "+a);
+        if(cs.length) parts.push("업종 "+cs.join(", "));
+        if(showT) parts.push("목표 수익률 "+t);
+        lines[i].textContent = parts.length ? ("직접 입력하신 값: "+parts.join(" · ")) : "";
+        lines[i].style.display = parts.length ? "flex" : "none";
+      }
+    }
+    if(amt) amt.addEventListener("input",function(){inputToChip(AMT,amt);refresh();},false);
+    if(tgt) tgt.addEventListener("input",function(){inputToChip(TGT,tgt);refresh();},false);
+    if(sec) sec.addEventListener("input",function(){sectorToChips();refresh();},false);
+    d.addEventListener("change",function(ev){
+      var id=ev.target&&ev.target.id; if(!id) return;
+      if(/^a[1-3]$/.test(id)&&amt){chipToInput(AMT,amt);refresh();}
+      else if(/^t[1-3]$/.test(id)&&tgt){chipToInput(TGT,tgt);refresh();}
+      else if(/^s[1-5]$/.test(id)){chipsToSector();refresh();}
+    },false);
+    refresh();
+
+    /* ── 2) 상호작용 로그 ── */
+    var log=[], t0=new Date().getTime();
+    function rec(kind,label){
+      log.push({t:Math.round((new Date().getTime()-t0)/1000), kind:kind, label:label});
+      var c=$("logCount"); if(c) c.textContent=log.length;
+    }
+    d.addEventListener("change",function(ev){
+      var el=ev.target; if(!el||!el.id) return;
+      var id=el.id;
+      if(id.indexOf("q_")===0){ if(el.checked) rec("질문", id.split("_").pop()); }
+      else if(id.indexOf("c_")===0){ rec("종목 열람", id.replace(/^c_[abcs]_/,"")); }
+      else if(id==="nav1"){ }
+      else if(id==="nav0"){ rec("화면", "투자 상황"); }
+      else if(id==="navI"){ rec("화면", "조건 입력"); }
+      else if(/^(r[1-5]|p[1-4]|a[1-3]|s[1-5]|t[1-3])$/.test(id)){ rec("조건", id); }
+      else if(/^inp(Amount|Sector|Target)$/.test(id)){ rec("직접 입력", id.replace("inp","")+": "+(el.value||"(비움)")); }
+    },false);
+
+    /* 로그는 화면에 표시하지 않고 내부에만 보관 (브라우저 콘솔에서 xaiLog 로 확인 가능) */
+    window.xaiLog=log;
+
+    /* ── 4) 자유입력 질문 → 설명 매칭 ── */
+    var INTENTS=[
+      ["dividend",["배당"]],
+      ["fundamental",["재무","per","pbr","roe","지표","실적","영업이익","이익률","가치"]],
+      ["transparency",["개인정보","내 정보","정보를","정보 사용","데이터","수집","어떻게 사용"]],
+      ["compare",["비교","다른 종목","비슷","대신","차이","나아"]],
+      ["risk",["위험","리스크","변동","손실","안전","떨어"]],
+      ["reason",["추천","이유","왜","적합","맞는","맞아","근거"]]
+    ];
+    function intentOf(q){
+      var t=q.toLowerCase();
+      for(var i=0;i<INTENTS.length;i++){var kw=INTENTS[i][1];for(var j=0;j<kw.length;j++){if(t.indexOf(kw[j])>=0)return INTENTS[i][0];}}
+      return null;
+    }
+    var LOAD_MS=1500;  /* 최소 로딩 표시 시간(ms) — 고정 답변·생성 답변 공통 */
+
+    /* ── 5) 생성 답변 준비 (claude.ai 게시본에서만 동작, 그 외에는 안내 문구로 대체) ── */
+    var samplerP=(window.claude&&typeof window.claude.use==="function")
+      ? window.claude.use("sample").catch(function(){return null;}) : Promise.resolve(null);
+    var ALIAS={"하이닉스":"SK하이닉스","sk하이닉스":"SK하이닉스","에코프로":"에코프로비엠","포스코":"POSCO홀딩스",
+      "posco":"POSCO홀딩스","엔솔":"LG에너지솔루션","lg엔솔":"LG에너지솔루션","lg에너지":"LG에너지솔루션",
+      "네이버":"NAVER","naver":"NAVER","삼전":"삼성전자","삼성":"삼성전자","현대자동차":"현대차","현대차":"현대차",
+      "kb":"KB금융","국민은행":"KB금융","카카오":"카카오","셀트리온":"셀트리온","에스오일":"S-Oil","soil":"S-Oil","s-oil":"S-Oil","하나금융":"하나금융지주","sk이노":"SK이노베이션","이노베이션":"SK이노베이션","카뱅":"카카오뱅크","skt":"SK텔레콤","sk텔레콤":"SK텔레콤","텔레콤":"SK텔레콤","크래프톤":"크래프톤","배그":"크래프톤"};
+    var NAMES=[]; (function(){var ns=d.querySelectorAll(".pg.cht .chd-n");for(var i=0;i<ns.length;i++){var n=ns[i].textContent.trim();if(NAMES.indexOf(n)<0)NAMES.push(n);}})();
+    function stocksIn(q){
+      var t=q.toLowerCase().replace(/\s/g,""), out=[];
+      NAMES.forEach(function(n){if(t.indexOf(n.toLowerCase().replace(/\s/g,""))>=0&&out.indexOf(n)<0)out.push(n);});
+      Object.keys(ALIAS).forEach(function(k){var v=ALIAS[k]; if(t.indexOf(k)>=0&&out.indexOf(v)<0&&!out.some(function(n){return n!==v&&n.indexOf(v)>=0;}))out.push(v);});
+      return out;
+    }
+    function leafText(el){
+      var parts=[], w=d.createTreeWalker(el,NodeFilter.SHOW_TEXT,null,false), n;
+      while((n=w.nextNode())){var t=n.nodeValue.replace(/^[\s·]+/,"").trim();if(t)parts.push(t);}
+      return parts.join(" ");
+    }
+    /* 정의·가정·매매 판단처럼 고정 카드로는 답이 안 되는 질문은 생성 답변으로 */
+    var GEN_HINT=["만약","라면","면 어떻게","언제","사도","살까","사야","팔아","팔까","해도 돼","괜찮","전망","앞으로"];
+    var DEF_HINT=["뭐야","뭔가요","뭐예요","뭐에요","무엇","뜻","의미","이란","란 ","설명해"];
+    function hasAny(t,arr){for(var i=0;i<arr.length;i++){if(t.indexOf(arr[i])>=0)return true;}return false;}
+    /* 용어 뜻 질문(PER이 뭐야?)은 재무·배당에서만 생성으로, "추천 이유가 뭐야?"는 고정 설명 유지 */
+    function needsGen(q,it){var t=q.toLowerCase();return hasAny(t,GEN_HINT)||((it==="fundamental"||it==="dividend")&&hasAny(t,DEF_HINT));}
+    var LABEL={reason:"추천 이유",risk:"위험",compare:"다른 종목 비교",transparency:"데이터 사용",dividend:"배당",fundamental:"재무 지표"};
+    function stockData(pg){
+      var name=pg.querySelector(".chd-n").textContent.trim(), head=leafText(pg.querySelector(".chd-r"));
+      var lines=["[종목] "+name+" ("+head+")"], exs=pg.querySelectorAll(".ex[class*=' q_']");
+      for(var i=0;i<exs.length;i++){
+        var key=(exs[i].className.match(/q_[abc]_\d+_(\w+)/)||[])[1], aw=exs[i].querySelector(".aw");
+        if(key&&aw) lines.push("- "+(LABEL[key]||key)+": "+leafText(aw));
+      }
+      return lines.join("\n");
+    }
+    function findPage(name,set){
+      var ps=d.querySelectorAll(".pg.cht"), any=null;
+      for(var i=0;i<ps.length;i++){var n=ps[i].querySelector(".chd-n").textContent.trim();
+        if(n===name){ if(ps[i].className.indexOf("c_"+set+"_")>=0) return ps[i]; any=any||ps[i]; }}
+      return any;
+    }
+    function checkedLabel(ids){for(var i=0;i<ids.length;i++){var e=$(ids[i]);if(e&&e.checked)return chipText(ids[i])||"";}return "";}
+    function userCond(){ return SCN_META.userCond; }
+    function recList(set){
+      var box=d.querySelector(".res-"+set); if(!box) return "";
+      var cs=box.querySelectorAll(".card"), out=[];
+      for(var i=0;i<cs.length;i++) out.push("- "+leafText(cs[i]));
+      return out.join("\n");
+    }
+    function buildPrompt(pg,code,q,others){
+      var set=code.charAt(0), hist=pg._hist||[];
+      var extra=others.map(function(n){var op=findPage(n,set);if(!op)return "";
+        var note=inSet(op,set)?"":"\n(주의: 이 종목은 이 사용자의 추천 목록에 없습니다. 아래 데이터의 매칭도·'~형 투자자에게 적합' 표현은 다른 투자 성향 기준이므로 이 사용자에 대한 매칭도로 말하지 마세요.)";
+        return stockData(op)+note;}).filter(Boolean).join("\n\n");
+      return [
+"당신은 모바일 주식 종목 추천 서비스의 '설명 에이전트'입니다. 사용자가 추천 결과에 대해 물은 질문에 답합니다.",
+"",
+"[답변 규칙]",
+"1. 아래 [데이터]에 있는 내용만 근거로 답하세요. 데이터에 없는 수치·사실·뉴스는 만들지 마세요. 데이터에 없으면 '제공된 추천 데이터에서는 확인할 수 없습니다'라고 말하세요.",
+"2. 사용자가 물은 것에만 답하세요. 다른 설명을 보자고 제안하거나, 추가로 확인해 보라고 권하거나, 사용자에게 되묻지 마세요.",
+"3. 사거나 팔라는 권유, 주가 예측, 투자 금액 지시는 하지 마세요. 그런 질문에는 데이터상 특징만 설명하고 최종 판단은 사용자에게 있다고 한 문장으로 밝히세요.",
+"4. 주식·추천 결과와 무관한 질문에는 이 서비스의 추천 종목에 대해서만 답할 수 있다고 짧게 말하세요.",
+"5. 2~4문장, '~입니다/~습니다' 체로 쓰고, 한 문장마다 줄을 바꾸세요. 마크다운·목록 기호·이모지는 쓰지 마세요. 답변 본문만 출력하세요.",
+"6. 용어를 물으면 일반적인 뜻을 한 문장으로 설명한 뒤 이 종목의 수치를 덧붙여도 됩니다.",
+"7. 다른 종목을 물으면 화면에 두 종목의 비교표(3개월 수익·변동성·위험도·PER·배당수익률·조건 매칭)가 함께 표시됩니다. 표의 수치를 나열하지 말고 핵심 차이를 문장으로 설명하세요.",
+"",
+"[데이터]",
+"<사용자 입력 조건>", userCond(), "",
+"<이 사용자에게 추천된 종목 목록>", recList(set), "",
+"<현재 보고 있는 종목>", stockData(pg),
+extra?("\n<질문에 언급된 다른 종목>\n"+extra):"",
+"",
+hist.length?("[이전 대화]\n"+hist.map(function(h){return "사용자: "+h.q+"\n에이전트: "+h.a;}).join("\n")+"\n"):"",
+"[사용자 질문]", q
+      ].join("\n");
+    }
+    function setBubble(bt,text){
+      bt.innerHTML="";
+      text.split(/\n+|(?<=[.!?])\s+(?=\S)/).map(function(x){return x.trim();}).filter(Boolean).forEach(function(line){
+        var sp=d.createElement("span"); sp.className="sl"; sp.textContent=line; bt.appendChild(sp);
+      });
+    }
+    function showLoader(ex,page){
+      var ld=d.createElement("div"); ld.className="ld";
+      ld.innerHTML='<div class="av">AI</div><div class="ld-b" role="status">질문 확인 중<span class="ld-d"><i></i><i></i><i></i></span></div>';
+      ex.appendChild(ld);
+      var snd=page.querySelector(".snd");
+      page.setAttribute("data-busy","1"); if(snd) snd.disabled=true;
+      setTimeout(function(){ld.scrollIntoView({block:"end",behavior:"smooth"});},30);
+      return function(){ if(ld.parentNode) ld.parentNode.removeChild(ld); page.removeAttribute("data-busy"); if(snd) snd.disabled=false; };
+    }
+    var FALLBACK="지금은 이 질문에 대한 답변을 만들 수 없습니다.\n추천 이유, 위험, 다른 종목과 비교, 배당, 재무 지표, 내 정보 사용에 대해서는 바로 답변드릴 수 있습니다.";
+    function askGen(page,code,q,others){
+      var chat=page.querySelector(".chat");
+      var ex=d.createElement("div"); ex.className="ex gen"; ex.style.display="flex";
+      ex.innerHTML='<div class="mu"><div class="bu"></div></div>';
+      ex.querySelector(".bu").textContent=q; chat.appendChild(ex);
+      var done=showLoader(ex,page), t0=Date.now();
+      function finish(text,ok,tag){
+        setTimeout(function(){
+          done();
+          var ma=d.createElement("div"); ma.className="ma";
+          ma.innerHTML='<div class="av">AI</div><div class="aw"><div class="bt"></div>'+(ok?'<div class="gen-src">추천 데이터 기반 AI 생성 답변</div>':'')+'</div>';
+          setBubble(ma.querySelector(".bt"),text);
+          if(ok&&others.length){ var card=compareCard(page,code,others); if(card){ var aw=ma.querySelector(".aw"); aw.insertBefore(card,aw.querySelector(".gen-src")); } }
+          ex.appendChild(ma);
+          if(ok){ page._hist=(page._hist||[]).concat([{q:q,a:text}]).slice(-4); }
+          rec("답변", tag+" | "+text.replace(/\n/g," "));
+          ex.scrollIntoView({block:"start",behavior:"smooth"});
+        }, Math.max(0, LOAD_MS-(Date.now()-t0)));
+      }
+      var prompt=buildPrompt(page,code,q,others);
+      samplerP.then(function(sample){
+        if(sample){
+          sample(prompt,{modelTier:"quick",cache:false}).then(function(r){ finish(r.text.trim(),true,"생성"); },
+            function(e){ finish(FALLBACK,false,"생성오류:"+(e&&e.code)); });
+          return;
+        }
+        /* Netlify 배포본: 서버 함수(/api/chat)가 연구용 API 키로 대신 호출 */
+        callProxy(prompt).then(function(t){ finish(t,true,"생성(서버)"); },
+          function(err){
+            var key=getKey();
+            if(!key){ finish(FALLBACK,false,"생성오류(서버):"+err); return; }
+            callAPI(key,prompt).then(function(t){ finish(t,true,"생성(API)"); },
+              function(e2){ finish(FALLBACK,false,"생성오류(API):"+e2); });
+          });
+      });
+    }
+
+
+    /* ── 6) 다운로드 파일용: Anthropic API 직접 호출 (연구자 PC에 저장된 키 사용) ── */
+    var API_MODEL="claude-haiku-4-5-20251001";
+    function getKey(){ try{ return localStorage.getItem("xai_api_key")||""; }catch(e){ return ""; } }
+    function callProxy(prompt){
+      return fetch("/api/chat",{method:"POST",headers:{"content-type":"application/json"},
+        body:JSON.stringify({prompt:prompt})
+      }).then(function(r){
+        return r.json().then(function(j){
+          if(!r.ok||!j||!j.text) throw (j&&j.error)||("http_"+r.status);
+          return j.text;
+        });
+      }).catch(function(e){ throw (typeof e==="string")?e:"network"; });
+    }
+    function callAPI(key,prompt){
+      return fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01",
+                 "anthropic-dangerous-direct-browser-access":"true"},
+        body:JSON.stringify({model:API_MODEL,max_tokens:500,temperature:0,messages:[{role:"user",content:prompt}]})
+      }).then(function(r){
+        return r.json().then(function(j){
+          if(!r.ok) throw (j&&j.error&&j.error.type)||("http_"+r.status);
+          var t=(j.content||[]).filter(function(c){return c.type==="text";}).map(function(c){return c.text;}).join("\n").trim();
+          if(!t) throw "empty"; return t;
+        });
+      }).catch(function(e){ throw (typeof e==="string")?e:"network"; });
+    }
+    /* 연구자 설정: Ctrl+Shift+K → API 키 입력·삭제 (참가자 화면에는 보이지 않음) */
+    d.addEventListener("keydown",function(e){
+      if(e.ctrlKey&&e.shiftKey&&(e.key==="K"||e.key==="k")){
+        e.preventDefault();
+        var cur=getKey();
+        var v=window.prompt("Anthropic API 키를 입력하세요.\n(비워 두고 확인하면 저장된 키가 삭제됩니다)\n현재: "+(cur?("저장됨 …"+cur.slice(-4)):"없음"),"");
+        if(v===null) return;
+        try{ if(v.trim()) localStorage.setItem("xai_api_key",v.trim()); else localStorage.removeItem("xai_api_key"); }catch(err){}
+        window.alert(v.trim()?"API 키를 저장했습니다.":"API 키를 삭제했습니다.");
+      }
+    },false);
+
+
+    /* ── 7) 다른 종목 질문 시 시각 비교표 ── */
+    function inSet(pg,set){ return pg.className.indexOf("c_"+set+"_")>=0; }
+    function metrics(pg,set){
+      var m={}, brs=pg.querySelectorAll(".br");
+      for(var i=0;i<brs.length;i++){var l=brs[i].querySelector(".br-l"),v=brs[i].querySelector(".br-v");
+        if(l&&v){var k=l.textContent.trim(); if(!(k in m)) m[k]=v.textContent.trim();}}
+      var mt=(pg.querySelector(".chd-c").textContent.match(/매칭\s*(\d+%)/)||[])[1]||"-";
+      return {ret:pg.querySelector(".chd-v").textContent.trim(), vol:m["변동성"]||"-", risk:m["위험도"]||"-",
+              per:m["PER"]||"-", div:m["배당수익률"]||"-", match:inSet(pg,set)?mt:"목록 외"};
+    }
+    function cls(kind,v){
+      if(kind==="ret") return v.charAt(0)==="-"?"td r":"td a";
+      if(kind==="lvl") return v==="높음"?"td r":"td g";
+      if(kind==="per") return "td b";
+      return "td g";
+    }
+    function compareCard(pg,code,others){
+      var set=code.charAt(0), cur=pg.querySelector(".chd-n").textContent.trim(), cols=[{n:cur,pg:pg,cur:true}];
+      others.slice(0,2).forEach(function(n){var op=findPage(n,set); if(op) cols.push({n:n,pg:op,cur:false});});
+      if(cols.length<2) return null;
+      cols.forEach(function(c){c.m=metrics(c.pg,set);});
+      var rows=[["3개월 수익","ret","ret"],["변동성","vol","lvl"],["위험도","risk","lvl"],["PER","per","per"],["배당수익률","div","x"],["조건 매칭","match","x"]];
+      var h='<div class="crd-t" style="padding:0 0 9px">종목 비교</div><div class="tbl"><div class="th"><div class="th-l">항목</div>';
+      cols.forEach(function(c){h+='<div class="th-c"><span class="th-b '+(c.cur?'cur">현재':'alt">질문')+'</span><span class="th-n"></span></div>';});
+      h+='</div>';
+      rows.forEach(function(r){h+='<div class="tr"><div class="td-l">'+r[0]+'</div>';
+        cols.forEach(function(c){var v=c.m[r[1]];h+='<div class="'+(v==="목록 외"?"td g":cls(r[2],v))+'"></div>';});h+='</div>';});
+      h+='</div>';
+      var box=d.createElement("div"); box.innerHTML=h;
+      var names=box.querySelectorAll(".th-n"); cols.forEach(function(c,i){names[i].textContent=c.n;});
+      var cells=box.querySelectorAll(".tr"); rows.forEach(function(r,ri){var tds=cells[ri].querySelectorAll(".td");cols.forEach(function(c,ci){tds[ci].textContent=c.m[r[1]];});});
+      var out=cols.filter(function(c){return !c.cur&&c.m.match==="목록 외";}).map(function(c){return c.n;});
+      if(out.length){var nt=d.createElement("div");nt.className="gen-src";nt.style.marginTop="6px";
+        nt.textContent="※ "+out.join(", ")+"은(는) 현재 투자 성향의 추천 목록에 없는 종목이라 조건 매칭도를 표시하지 않습니다.";box.appendChild(nt);}
+      return box;
+    }
+
+    function ask(page,code){
+      var inp=page.querySelector(".cinp"); if(!inp) return;
+      var q=inp.value.trim(); if(!q){inp.focus();return;}
+      if(page.getAttribute("data-busy")) return;
+      var hs=page.querySelectorAll(".hint,.exq"); for(var h=0;h<hs.length;h++) hs[h].style.display="none";
+      var it=intentOf(q), cur=page.querySelector(".chd-n").textContent.trim();
+      var others=stocksIn(q).filter(function(n){return n!==cur;});
+      var cmpEx=page.querySelector(".ex.q_"+code+"_compare"), cmpTxt=cmpEx?cmpEx.textContent:"";
+      var fixedOK = it && !needsGen(q,it) && (others.length===0 || (it==="compare" && others.every(function(n){return cmpTxt.indexOf(n)>=0;})));
+      inp.value="";
+      if(!fixedOK){ rec("질문","생성 | "+q); askGen(page,code,q,others); return; }
+      var id="q_"+code+"_"+it, box=$(id), ex=page.querySelector(".ex."+id); if(!box||!ex) return;
+      var bu=ex.querySelector(".bu"); if(bu) bu.textContent=q;
+      box.checked=true;
+      ex.parentNode.appendChild(ex);           /* 질문한 순서대로 아래에 쌓기 */
+      rec("질문", it+" | "+q);
+      var ma=ex.querySelector(".ma"), old=ex.querySelector(".ld"); if(old) old.parentNode.removeChild(old);
+      if(ma) ma.style.display="none";
+      var done=showLoader(ex,page);
+      setTimeout(function(){ done(); if(ma) ma.style.display=""; ex.scrollIntoView({block:"start",behavior:"smooth"}); },LOAD_MS);
+      var aw=ex.querySelector(".bt"); page._hist=(page._hist||[]).concat([{q:q,a:aw?aw.textContent:""}]).slice(-4);
+    }
+    var sends=d.querySelectorAll(".snd[data-c]");
+    for(var i=0;i<sends.length;i++){
+      (function(btn){
+        var page=btn.closest(".pg"), code=btn.getAttribute("data-c"), inp=page.querySelector(".cinp");
+        btn.addEventListener("click",function(){ask(page,code);},false);
+        if(inp) inp.addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.isComposing){e.preventDefault();ask(page,code);}},false);
+      })(sends[i]);
+    }
+
+    /* ── 9) 시나리오 과제 흐름: 첫 선택 → 자유 대화 → 최종 선택 ── */
+    var SC={"id": "S3", "name": "장기 성장", "diff": "hard", "cond": "user", "rank1": "에코프로비엠", "names": ["에코프로비엠", "SK하이닉스", "LG에너지솔루션"], "want": {"risk": "적극투자형", "period": "3년 이상", "amount": "500만원", "sectors": ["반도체", "2차전지"], "target": "15%"}, "goals": [["추천 1위 종목의 PER", ["45"]], ["세 종목 중 변동성이 가장 낮은 종목", ["하이닉스"]], ["추천 1위 종목의 목표 수익률 달성 가능성", ["높"]]], "userCond": "시나리오 인물: 30대 직장인\n상황: 당장 쓸 일이 없는 여유자금을 오래 운용해 자산을 키우고 싶습니다.\n투자 성향: 적극투자형\n투자 기간: 3년 이상\n투자 금액: 500만원\n관심 업종: 반도체, 2차전지\n목표 수익률: 15%\n투자 목적: 자본 증식 (수익 지향)"}; window.XAI_SCENARIO=SC; window.XAI_CONDITION=SC.cond;
+    rec("시나리오", SC.id+" "+SC.name+" ("+(SC.diff==="easy"?"쉬움":"어려움")+") · "+(SC.cond==="mixed"?"혼합 주도":"사용자 주도"));
+    var appEl=$("app"); appEl.classList.add("pre");
+    var st={init:null,final:null,tInit:null};
+    function pickGroup(g,btn){var bs=d.querySelectorAll('.pick[data-g="'+g+'"]');for(var i=0;i<bs.length;i++)bs[i].classList.toggle("on",bs[i]===btn);}
+    var picks=d.querySelectorAll(".pick");
+    for(var pi=0;pi<picks.length;pi++){picks[pi].addEventListener("click",function(){
+      var g=this.getAttribute("data-g"), n=this.getAttribute("data-n");
+      if(g==="init"){ if(st.init) return; st.init=n; st.tInit=log.length?log[log.length-1].t:0; pickGroup(g,this);
+        rec("첫 선택", n); txt($("icName"),n); setTimeout(function(){appEl.classList.remove("pre");},250); }
+      else { st.final=n; pickGroup(g,this); rec("최종 선택(임시)", n); chkFin(); }
+    },false);}
+    var fr=$("finReason"), fg=$("finGo");
+    var gas=d.querySelectorAll(".ga-i");
+    function chkFin(){ var ok=st.final&&fr.value.trim().length>=5; for(var i=0;i<gas.length;i++) if(!gas[i].value.trim()) ok=false; fg.disabled=!ok; }
+    fr.addEventListener("input",chkFin,false);
+    for(var gi=0;gi<gas.length;gi++) gas[gi].addEventListener("input",chkFin,false);
+    function gScore(){ var r=[],n=0; for(var i=0;i<SC.goals.length;i++){ var a=(gas[i]?gas[i].value:"").toLowerCase().replace(/\s/g,"");
+        var ok=SC.goals[i][1].some(function(k){return a.indexOf(k.toLowerCase())>=0;}); if(ok)n++; r.push([SC.goals[i][0],(gas[i]?gas[i].value.trim():""),ok?1:0]); } return {rows:r,n:n}; }
+    /* ── 조건 입력 확인: 시나리오 조건과 같아야 추천으로 이동 ── */
+    var condTry=0;
+    function lab(id){var l=d.querySelector('label[for="'+id+'"] .opt-t');return l?l.textContent.trim():"";}
+    function picked(ids){for(var i=0;i<ids.length;i++){var e=$(ids[i]);if(e&&e.checked)return lab(ids[i]);}return "";}
+    function nz(v){return (v||"").toLowerCase().replace(/[\s,·]/g,"");}
+    function numOf(v){var m=(v||"").match(/\d+(\.\d+)?/);return m?parseFloat(m[0]):NaN;}
+    $("condGo").addEventListener("click",function(){
+      var W=SC.want, bad=[];
+      if(picked(["r1","r2","r3","r4","r5"])!==W.risk) bad.push("투자 성향");
+      if(picked(["p1","p2","p3","p4"])!==W.period) bad.push("투자 기간");
+      if(nz(amt&&amt.value)!==nz(W.amount)) bad.push("투자 금액");
+      var have=(sec&&sec.value||"").split(/[,，、\/·]+/).map(nz).filter(Boolean).sort().join("|");
+      if(have!==W.sectors.map(nz).sort().join("|")) bad.push("관심 업종");
+      if(numOf(tgt&&tgt.value)!==numOf(W.target)) bad.push("목표 수익률");
+      condTry++; var box=$("condErr");
+      if(bad.length){ box.style.display="block";
+        box.textContent="시나리오의 조건과 다른 항목이 있어요: "+bad.join(", ")+". 첫 화면의 '입력할 조건'을 확인해 주세요.";
+        rec("조건 입력 오류", bad.join(", ")); return; }
+      box.style.display="none"; rec("조건 입력 완료", condTry+"회 시도"); $("nav1").checked=true; rec("화면","추천 결과");
+    },false);
+    function secs(){return Math.round((new Date().getTime()-t0)/1000);}
+    function summary(){
+      var qs=log.filter(function(x){return x.kind==="질문"||x.kind==="제안 수락 응답";}).length;
+      var sg=log.filter(function(x){return x.kind==="에이전트 제안";}).length;
+      var acc=log.filter(function(x){return x.kind==="제안 수락";}).length;
+      var rej=log.filter(function(x){return x.kind==="제안 거절";}).length;
+      var ign=log.filter(function(x){return x.kind==="제안 무응답";}).length;
+      var agree=st.final===SC.rank1?1:0, sw=(st.init!==SC.rank1&&st.final===SC.rank1)?1:0;
+      return [["조건",SC.cond==="mixed"?"혼합 주도":"사용자 주도"],["시나리오",SC.id+" "+SC.name],["난이도",SC.diff==="easy"?"쉬움":"어려움"],
+        ["추천 1위",SC.rank1],["첫 선택",st.init],["최종 선택",st.final],["Agreement(최종=1위)",agree],["Switch(첫 선택≠1위 → 최종=1위)",sw],
+        ["선택 이유",fr.value.trim().replace(/\s+/g," ")],["알아낸 것 정답 수(자동 채점, 확인 필요)",gScore().n+"/"+SC.goals.length],["조건 입력 시도 횟수",condTry],["질문·설명 요청 수",qs],["에이전트 제안",sg],["제안 수락",acc],["제안 거절",rej],["제안 무응답",ign],["총 소요(초)",secs()]];
+    }
+    function exportText(){
+      var s=summary().map(function(r){return r[0]+"\t"+r[1];}).join("\n");
+      var l=log.map(function(x){return x.t+"\t"+x.kind+"\t"+String(x.label).replace(/[\t\n]/g," ");}).join("\n");
+      s+="\n"+gScore().rows.map(function(r,i){return "목표"+(i+1)+" ("+r[0]+")\t"+r[1]+"\t"+(r[2]?"정답":"오답/확인")}).join("\n");
+      return "[요약]\n"+s+"\n\n[상호작용 로그] 초\t종류\t내용\n"+l;
+    }
+    fg.addEventListener("click",function(){
+      if(fg.disabled) return;
+      gScore().rows.forEach(function(r,i){ rec("알아낸 것 "+(i+1), r[1]); });
+      rec("최종 제출", st.final+" | "+fr.value.trim().replace(/\s+/g," "));
+      $("rsOut").value=exportText(); $("nav3").checked=true; rec("화면","완료");
+    },false);
+    d.addEventListener("keydown",function(ev){
+      if(ev.ctrlKey&&ev.shiftKey&&(ev.key==="L"||ev.key==="l")){ ev.preventDefault();
+        var p=$("rsPanel"); $("rsOut").value=exportText(); p.style.display=p.style.display==="none"?"flex":"none"; }
+    },false);
+    $("rsCopy").addEventListener("click",function(){ var o=$("rsOut"); o.select();
+      try{ navigator.clipboard.writeText(o.value).then(function(){txt($("rsCopy"),"복사됨");}); }catch(e){ d.execCommand("copy"); } },false);
+  }catch(e){}
+})();
+</script>
+
+</body>
+</html>
