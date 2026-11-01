@@ -28,6 +28,7 @@ th{background:var(--paper);font-size:12px;color:var(--muted)}
 .sec{font-size:15px;font-weight:800;margin:22px 0 8px}
 .muted{color:var(--muted);font-size:13px;line-height:1.6}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="hd"><h1>실험 기록 모아보기</h1><p>링크별로 기록이 다 채워졌는지 확인하고, 파일로 내려받습니다</p></div>
@@ -76,20 +77,42 @@ th{background:var(--paper);font-size:12px;color:var(--muted)}
     }).catch(function(){ $("msg").className="msg err"; $("msg").textContent="네트워크 오류로 불러오지 못했습니다."; });
   }
   var tsvHead=["참가자","순서","링크","조건","시나리오","종목 세트","Agreement","Switch","알아낸 것 정답 수","총 소요(초)","TLX(평균)","TIA(평균)","저장 시각"].join("\t");
+  var HEAD=["참가자","순서","링크","조건","시나리오","종목 세트","추천 1위","첫 선택","최종 선택","Agreement","Switch","알아낸 것 정답 수","총 소요(초)","질문·설명 요청 수","에이전트 제안","제안 수락","제안 거절","제안 무응답","선택 이유","TLX(평균)","TIA(평균)","저장 시각"];
+  function rowObj(x){ var t=x.text||"", s=x.survey||{}, o={};
+    var v=[x.pid,x.order,x.link,field(t,"조건"),field(t,"시나리오"),field(t,"종목 세트"),field(t,"추천 1위"),field(t,"첫 선택"),field(t,"최종 선택"),field(t,"Agreement"),field(t,"Switch"),
+      field(t,"알아낸 것 정답 수"),field(t,"총 소요"),field(t,"질문·설명 요청 수"),field(t,"에이전트 제안"),field(t,"제안 수락"),field(t,"제안 거절"),field(t,"제안 무응답"),field(t,"선택 이유"),
+      s.tlx==null?"":s.tlx,s.tia==null?"":s.tia,(x.savedAt||"").replace("T"," ").slice(0,19)];
+    HEAD.forEach(function(h,i){ var val=v[i]; o[h]=(val!==""&&val!=null&&!isNaN(+val)&&/^-?[\d.]+$/.test(String(val)))?+val:val; }); return o; }
+  function logRows(list){ var out=[]; list.forEach(function(x){ var t=x.text||"", i=t.indexOf("[상호작용 로그]"); if(i<0) return;
+      t.slice(i).split("\n").slice(1).forEach(function(line){ var c=line.split("\t"); if(c.length<2||!/^\d+$/.test(c[0])) return;
+        out.push({"참가자":x.pid,"링크":x.link,"순서":x.order,"초":+c[0],"종류":c[1],"내용":c.slice(2).join(" ")}); }); });
+    return out; }
+  function surveyRows(list){ var out=[]; list.forEach(function(x){ var a=(x.survey&&x.survey.answers)||{}; if(!x.survey) return;
+      var r={"참가자":x.pid,"링크":x.link,"순서":x.order};
+      ["tlx_md","tlx_pd","tlx_td","tlx_pf","tlx_ef","tlx_fr"].forEach(function(k,i){ r["TLX"+(i+1)+" "+["정신","신체","시간","수행","노력","좌절"][i]]=a[k]; });
+      for(var i=1;i<=12;i++) r["TIA"+i+(i<=5?" (역)":"")]=a["tia"+i];
+      r["TLX 평균"]=x.survey.tlx; r["TIA 평균"]=x.survey.tia; out.push(r); }); return out; }
+  function xlsx(name,list){
+    if(!window.XLSX){ alert("엑셀 변환 도구를 불러오지 못했습니다. 인터넷 연결을 확인하고 새로고침해 주세요."); return; }
+    var wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(list.map(rowObj),{header:HEAD}),"과제 기록");
+    var sv=surveyRows(list); if(sv.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(sv),"설문 응답");
+    var lg=logRows(list); if(lg.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(lg),"상호작용 로그");
+    XLSX.writeFile(wb,name); }
   function tsvRow(x){ var t=x.text||"", mm=merged(x); return [x.pid,x.order,x.link,field(t,"조건"),field(t,"시나리오"),field(t,"종목 세트"),field(t,"Agreement"),field(t,"Switch"),field(t,"알아낸 것 정답 수"),field(t,"총 소요"),mm.tlx,mm.tia,x.savedAt].join("\t"); }
   function render(raw){
     var byP={}; items.forEach(function(x){ (byP[x.pid]=byP[x.pid]||[]).push(x); });
     var pids=Object.keys(byP).sort(function(a,b){return a.localeCompare(b,"ko",{numeric:true});});
     var full=pids.filter(function(p){ return byP[p].length>=4; }).length;
     var h='<div class="stats"><div><b>'+items.length+' / 80</b><span>저장된 과제 기록</span></div></div>';
-    h+='<div class="row"><button class="btn" id="dlJson">분석기용 파일 받기 (.json)</button><button class="btn ghost" id="dlTsv">요약 표 받기 (엑셀용 .tsv)</button><button class="rst" id="rstAll" style="margin-left:auto">전체 초기화</button></div>';
+    h+='<div class="row"><button class="btn" id="dlJson">분석기용 파일 받기 (.json)</button><button class="btn ghost" id="dlTsv">전체 엑셀 받기 (.xlsx)</button><button class="rst" id="rstAll" style="margin-left:auto">전체 초기화</button></div>';
     h+='<p class="muted">분석기 1단계의 <b>[파일로 한꺼번에 가져오기]</b>에 .json 파일을 넣으면 모든 기록이 한 번에 들어갑니다. 같은 과제를 다시 한 경우 가장 최근 기록만 씁니다.</p>';
     var LINKS=[["s1","안정 운용 · 사용자 주도 · 세트 A"],["s3","장기 성장 · 사용자 주도 · 세트 A"],["s5","안정 운용 · 혼합 주도 · 세트 A"],["s6","장기 성장 · 혼합 주도 · 세트 A"],
                ["s7","안정 운용 · 사용자 주도 · 세트 B"],["s8","장기 성장 · 사용자 주도 · 세트 B"],["s9","안정 운용 · 혼합 주도 · 세트 B"],["s10","장기 성장 · 혼합 주도 · 세트 B"]];
     h+='<div class="sec">링크별 기록 (각 10개 예정)</div><div class="tw"><table><thead><tr><th>링크</th><th>시나리오 · 조건 · 세트</th><th>기록 수</th><th>파일 받기</th></tr></thead><tbody>';
     LINKS.forEach(function(L){ var xs=items.filter(function(x){return x.link===L[0];});
       h+='<tr><td><b>'+L[0]+'</b></td><td>'+L[1]+'</td><td class="'+(xs.length>=10?'ok':'')+'">'+(xs.length>=10?'✓ ':'')+xs.length+' / 10</td>'+
-         '<td><button class="btn ghost" data-ln="'+L[0]+'" data-fmt="tsv" style="padding:6px 10px;font-size:12px">엑셀용</button> <button class="btn ghost" data-ln="'+L[0]+'" data-fmt="json" style="padding:6px 10px;font-size:12px">.json</button> <button class="rst" data-rl="'+L[0]+'">초기화</button></td></tr>'; });
+         '<td><button class="btn ghost" data-ln="'+L[0]+'" data-fmt="tsv" style="padding:6px 10px;font-size:12px">엑셀</button> <button class="btn ghost" data-ln="'+L[0]+'" data-fmt="json" style="padding:6px 10px;font-size:12px">.json</button> <button class="rst" data-rl="'+L[0]+'">초기화</button></td></tr>'; });
     h+='</tbody></table></div>';
     $("out").innerHTML=h;
     $("dlJson").onclick=function(){ dl("StockFit_기록_"+new Date().toISOString().slice(0,10)+".json",JSON.stringify({items:items},null,1),"application/json"); };
@@ -97,13 +120,13 @@ th{background:var(--paper);font-size:12px;color:var(--muted)}
       var ln=btn.dataset.ln, xs=items.filter(function(x){return x.link===ln;}), day=new Date().toISOString().slice(0,10);
       if(btn.dataset.fmt==="json"){ var pids=xs.map(function(x){return x.pid;});
         dl("StockFit_"+ln+"_"+day+".json",JSON.stringify({items:xs},null,1),"application/json"); }
-      else dl("StockFit_"+ln+"_"+day+".tsv","\ufeff"+tsvHead+"\n"+xs.map(tsvRow).join("\n"),"text/tab-separated-values"); }; });
+      else xlsx("StockFit_"+ln+"_"+day+".xlsx",xs); }; });
     $("out").querySelectorAll("[data-rl]").forEach(function(b){ b.onclick=function(){ del("link="+b.dataset.rl, b.dataset.rl+" 링크의 과제 기록 "+items.filter(function(x){return x.link===b.dataset.rl;}).length+"개를 모두 삭제합니다. (설문은 유지)"); }; });
     $("out").querySelectorAll("[data-rp]").forEach(function(b){ b.onclick=function(){ del("pid="+encodeURIComponent(b.dataset.rp), b.dataset.rp+" 참가자의 과제 기록과 설문을 모두 삭제합니다. 이 참가자는 처음부터 다시 진행할 수 있습니다."); }; });
     $("out").querySelectorAll("[data-rk]").forEach(function(b){ b.onclick=function(){ if(!b.dataset.rk) return; del("target="+encodeURIComponent(b.dataset.rk), "이 과제 기록 1개를 삭제합니다. (다시 하기 전 기록까지 모두 지우려면 링크·참가자 초기화를 쓰세요)"); }; });
     $("rstAll").onclick=function(){ var t=prompt("모든 기록(과제·설문)을 삭제합니다. 계속하려면 '전체 삭제'라고 입력하세요."); if(t==="전체 삭제") del("all=1","전체 기록을 삭제합니다."); };
     $("dlTsv").onclick=function(){ var cols=["참가자","그룹","순서","링크","조건","시나리오","종목 세트","Agreement","Switch","알아낸 것 정답 수","총 소요(초)","TLX","지각 난이도","몰입도","TIA(블록)","조작 확인","저장 시각"];
-      dl("StockFit_요약_"+new Date().toISOString().slice(0,10)+".tsv","\ufeff"+cols.join("\t")+"\n"+items.map(tsvRow).join("\n"),"text/tab-separated-values"); };
+      xlsx("StockFit_전체_"+new Date().toISOString().slice(0,10)+".xlsx",items); };
   }
 })();
 </script>
