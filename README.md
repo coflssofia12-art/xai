@@ -1,5 +1,6 @@
-# StockFit AI 실험용 배포본 (최신 · 세트 A/B)
+# StockFit AI 실험용 배포본 (최종 v2)
 
+## 실험 링크 (각 10명)
 | 주소 | 시나리오 | 조건 | 종목 세트 |
 |---|---|---|---|
 | /s1 | 안정 운용 (쉬움) | 사용자 주도 | A |
@@ -11,5 +12,20 @@
 | /s9 | 안정 운용 (쉬움) | 혼합 주도 | B |
 | /s10 | 장기 성장 (어려움) | 혼합 주도 | B |
 
-- netlify/functions/chat.mjs : AI 답변 서버 함수
-- Netlify 환경변수 ANTHROPIC_API_KEY 필요
+## 진행
+첫 화면 참가자 번호 입력 → 과제 → 제출 → 과제 직후 설문(NASA-TLX 6 + TIA 12) → 저장
+
+## 기록 저장 위치
+Netlify Blobs 저장소 "stockfit-logs"
+기록 이름: <링크>/<참가자번호>_<순서>_<저장시각>  예) s5/P01_1_1730350000000
+
+## 결과 확인
+/results → RESULTS_KEY 입력 → 링크별 기록 수(n/10), 파일 받기, 초기화
+
+## 필요한 Netlify 환경변수
+- ANTHROPIC_API_KEY : AI 답변
+- RESULTS_KEY : 결과 페이지 비밀번호
+
+## 서버 함수 (GitHub에서 이 경로에 있어야 함)
+- netlify/functions/chat.mjs
+- netlify/functions/log.mjs

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>실험 기록 모아보기</title>
+<style>
+:root{--navy:#243484;--ink:#1A1F36;--muted:#646D8C;--line:#E4E8F4;--paper:#F5F7FC;--ok:#1E7A4E;--warn:#B4331F}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;padding-bottom:80px}
+.hd{background:var(--navy);color:#fff;padding:24px 20px}
+.hd h1{margin:0;font-size:21px}.hd p{margin:4px 0 0;font-size:13px;opacity:.8}
+.wrap{max-width:1100px;margin:0 auto;padding:18px 16px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input{font:inherit;font-size:15px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;min-width:220px}
+.btn{font:inherit;font-weight:800;font-size:14px;border:0;border-radius:10px;padding:11px 16px;background:var(--navy);color:#fff;cursor:pointer}
+.btn.ghost{background:#fff;color:var(--navy);border:1px solid var(--line)}
+.stats{display:flex;gap:24px;flex-wrap:wrap;margin:18px 0}
+.stats b{display:block;font-size:26px;font-variant-numeric:tabular-nums}.stats span{font-size:12px;color:var(--muted)}
+.tw{overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{background:var(--paper);font-size:12px;color:var(--muted)}
+.ok{color:var(--ok);font-weight:800}.no{color:var(--warn);font-weight:800}
+.msg{font-size:13px;margin-top:10px}.msg.err{color:var(--warn)}.msg.ok{color:var(--ok)}
+.rst{font:inherit;font-size:12px;font-weight:800;border-radius:8px;padding:6px 10px;cursor:pointer;background:#fff;color:var(--warn);border:1px solid #F1C8C0}
+.rst:hover{background:#FBE9E5}
+.sec{font-size:15px;font-weight:800;margin:22px 0 8px}
+.muted{color:var(--muted);font-size:13px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="hd"><h1>실험 기록 모아보기</h1><p>링크별로 기록이 다 채워졌는지 확인하고, 파일로 내려받습니다</p></div>
+<div class="wrap">
+  <div class="row"><input id="key" type="password" placeholder="결과 열람 키 (RESULTS_KEY)" autocomplete="off"><button class="btn" id="load">불러오기</button></div>
+  <div class="msg" id="msg"></div>
+  <div id="out"></div>
+</div>
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i);}, items=[];
+  var ORDER={G1:["s1","s3","s9","s10"],G2:["s9","s10","s1","s3"],G3:["s7","s8","s5","s6"],G4:["s5","s6","s7","s8"]};
+  try{ $("key").value=sessionStorage.getItem("sf_key")||""; }catch(e){}
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];}); }
+  function field(t,k){ var m=t.match(new RegExp("^"+k+"[^\\t\\n]*\\t([^\\n]*)","m")); return m?m[1].trim():""; }
+  function latest(list,keyf){ var m={}; list.forEach(function(x){ var k=keyf(x); if(!m[k]||m[k].savedAt<x.savedAt) m[k]=x; }); return Object.keys(m).map(function(k){return m[k];}); }
+  var surveys=[], ALL=[];
+  function del(q,label){
+    var k=$("key").value.trim();
+    if(!confirm(label+"\n\n삭제한 기록은 되돌릴 수 없습니다. 계속할까요?")) return;
+    $("msg").className="msg"; $("msg").textContent="삭제하는 중…";
+    fetch("/api/log?key="+encodeURIComponent(k)+"&"+q,{method:"DELETE"}).then(function(r){ return r.json().then(function(j){return {ok:r.ok,j:j};}); })
+    .then(function(res){ if(!res.ok) throw res.j.error; load(); setTimeout(function(){ $("msg").className="msg ok"; $("msg").textContent=res.j.deleted+"개 기록을 삭제했습니다."; },600); })
+    .catch(function(e){ $("msg").className="msg err"; $("msg").textContent="삭제하지 못했습니다 ("+e+")."; });
+  }
+  function mean(a){ a=a.filter(function(v){return typeof v==="number"&&!isNaN(v);}); return a.length?a.reduce(function(s,v){return s+v;},0)/a.length:null; }
+  function sv(pid,skind,n){ return surveys.filter(function(x){return x.pid===pid&&x.skind===skind&&+x.n===+n;})[0]; }
+  function tlxOf(a){ return a?mean(["tlx_md","tlx_pd","tlx_td","tlx_pf","tlx_ef","tlx_fr"].map(function(k){return a[k];})):null; }
+  function tiaOf(a){ if(!a) return null; var v=[]; for(var i=1;i<=12;i++){ var x=a["tia"+i]; if(typeof x==="number") v.push(i<=5?8-x:x); } return mean(v); }
+  function r2(v){ return v==null?"":Math.round(v*100)/100; }
+  function merged(x){ var s=x.survey||{}; return {tlx:s.tlx==null?"":s.tlx,tia:s.tia==null?"":s.tia,done:!!x.survey}; }
+  function dl(name,text,type){ var a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([text],{type:type})); a.download=name; document.body.appendChild(a); a.click(); a.remove(); }
+  $("load").addEventListener("click",load);
+  $("key").addEventListener("keydown",function(e){ if(e.key==="Enter") load(); });
+  function load(){
+    var k=$("key").value.trim(); if(!k){ $("msg").textContent="키를 입력하세요."; return; }
+    $("msg").className="msg"; $("msg").textContent="불러오는 중…";
+    fetch("/api/log?key="+encodeURIComponent(k)).then(function(r){ return r.json().then(function(j){ return {ok:r.ok,j:j}; }); })
+    .then(function(res){
+      if(!res.ok){ $("msg").className="msg err"; $("msg").textContent=res.j.error==="unauthorized"?"키가 맞지 않습니다.":"불러오지 못했습니다 ("+res.j.error+")."; return; }
+      try{ sessionStorage.setItem("sf_key",k); }catch(e){}
+      var all=res.j.items||[]; ALL=all;
+      items=latest(all.filter(function(x){return x.type!=="survey";}),function(x){return x.pid+"|"+x.order+"|"+x.link;});
+      surveys=latest(all.filter(function(x){return x.type==="survey";}),function(x){return x.pid+"|"+x.skind+"|"+x.n;});
+      $("msg").textContent=""; render(all.length);
+    }).catch(function(){ $("msg").className="msg err"; $("msg").textContent="네트워크 오류로 불러오지 못했습니다."; });
+  }
+  var tsvHead=["참가자","순서","링크","조건","시나리오","종목 세트","Agreement","Switch","알아낸 것 정답 수","총 소요(초)","TLX(평균)","TIA(평균)","저장 시각"].join("\t");
+  function tsvRow(x){ var t=x.text||"", mm=merged(x); return [x.pid,x.order,x.link,field(t,"조건"),field(t,"시나리오"),field(t,"종목 세트"),field(t,"Agreement"),field(t,"Switch"),field(t,"알아낸 것 정답 수"),field(t,"총 소요"),mm.tlx,mm.tia,x.savedAt].join("\t"); }
+  function render(raw){
+    var byP={}; items.forEach(function(x){ (byP[x.pid]=byP[x.pid]||[]).push(x); });
+    var pids=Object.keys(byP).sort(function(a,b){return a.localeCompare(b,"ko",{numeric:true});});
+    var full=pids.filter(function(p){ return byP[p].length>=4; }).length;
+    var h='<div class="stats"><div><b>'+items.length+' / 80</b><span>저장된 과제 기록</span></div></div>';
+    h+='<div class="row"><button class="btn" id="dlJson">분석기용 파일 받기 (.json)</button><button class="btn ghost" id="dlTsv">요약 표 받기 (엑셀용 .tsv)</button><button class="rst" id="rstAll" style="margin-left:auto">전체 초기화</button></div>';
+    h+='<p class="muted">분석기 1단계의 <b>[파일로 한꺼번에 가져오기]</b>에 .json 파일을 넣으면 모든 기록이 한 번에 들어갑니다. 같은 과제를 다시 한 경우 가장 최근 기록만 씁니다.</p>';
+    var LINKS=[["s1","안정 운용 · 사용자 주도 · 세트 A"],["s3","장기 성장 · 사용자 주도 · 세트 A"],["s5","안정 운용 · 혼합 주도 · 세트 A"],["s6","장기 성장 · 혼합 주도 · 세트 A"],
+               ["s7","안정 운용 · 사용자 주도 · 세트 B"],["s8","장기 성장 · 사용자 주도 · 세트 B"],["s9","안정 운용 · 혼합 주도 · 세트 B"],["s10","장기 성장 · 혼합 주도 · 세트 B"]];
+    h+='<div class="sec">링크별 기록 (각 10개 예정)</div><div class="tw"><table><thead><tr><th>링크</th><th>시나리오 · 조건 · 세트</th><th>기록 수</th><th>파일 받기</th></tr></thead><tbody>';
+    LINKS.forEach(function(L){ var xs=items.filter(function(x){return x.link===L[0];});
+      h+='<tr><td><b>'+L[0]+'</b></td><td>'+L[1]+'</td><td class="'+(xs.length>=10?'ok':'')+'">'+(xs.length>=10?'✓ ':'')+xs.length+' / 10</td>'+
+         '<td><button class="btn ghost" data-ln="'+L[0]+'" data-fmt="tsv" style="padding:6px 10px;font-size:12px">엑셀용</button> <button class="btn ghost" data-ln="'+L[0]+'" data-fmt="json" style="padding:6px 10px;font-size:12px">.json</button> <button class="rst" data-rl="'+L[0]+'">초기화</button></td></tr>'; });
+    h+='</tbody></table></div>';
+    $("out").innerHTML=h;
+    $("dlJson").onclick=function(){ dl("StockFit_기록_"+new Date().toISOString().slice(0,10)+".json",JSON.stringify({items:items},null,1),"application/json"); };
+    $("out").querySelectorAll("[data-ln]").forEach(function(btn){ btn.onclick=function(){
+      var ln=btn.dataset.ln, xs=items.filter(function(x){return x.link===ln;}), day=new Date().toISOString().slice(0,10);
+      if(btn.dataset.fmt==="json"){ var pids=xs.map(function(x){return x.pid;});
+        dl("StockFit_"+ln+"_"+day+".json",JSON.stringify({items:xs},null,1),"application/json"); }
+      else dl("StockFit_"+ln+"_"+day+".tsv","\ufeff"+tsvHead+"\n"+xs.map(tsvRow).join("\n"),"text/tab-separated-values"); }; });
+    $("out").querySelectorAll("[data-rl]").forEach(function(b){ b.onclick=function(){ del("link="+b.dataset.rl, b.dataset.rl+" 링크의 과제 기록 "+items.filter(function(x){return x.link===b.dataset.rl;}).length+"개를 모두 삭제합니다. (설문은 유지)"); }; });
+    $("out").querySelectorAll("[data-rp]").forEach(function(b){ b.onclick=function(){ del("pid="+encodeURIComponent(b.dataset.rp), b.dataset.rp+" 참가자의 과제 기록과 설문을 모두 삭제합니다. 이 참가자는 처음부터 다시 진행할 수 있습니다."); }; });
+    $("out").querySelectorAll("[data-rk]").forEach(function(b){ b.onclick=function(){ if(!b.dataset.rk) return; del("target="+encodeURIComponent(b.dataset.rk), "이 과제 기록 1개를 삭제합니다. (다시 하기 전 기록까지 모두 지우려면 링크·참가자 초기화를 쓰세요)"); }; });
+    $("rstAll").onclick=function(){ var t=prompt("모든 기록(과제·설문)을 삭제합니다. 계속하려면 '전체 삭제'라고 입력하세요."); if(t==="전체 삭제") del("all=1","전체 기록을 삭제합니다."); };
+    $("dlTsv").onclick=function(){ var cols=["참가자","그룹","순서","링크","조건","시나리오","종목 세트","Agreement","Switch","알아낸 것 정답 수","총 소요(초)","TLX","지각 난이도","몰입도","TIA(블록)","조작 확인","저장 시각"];
+      dl("StockFit_요약_"+new Date().toISOString().slice(0,10)+".tsv","\ufeff"+cols.join("\t")+"\n"+items.map(tsvRow).join("\n"),"text/tab-separated-values"); };
+  }
+})();
+</script>
+</body>
+</html>
