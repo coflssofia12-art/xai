@@ -48,7 +48,7 @@ details.edit summary{cursor:pointer;font-weight:800;font-size:14px;color:var(--n
   function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];}); }
   function field(t,k){ var m=t.match(new RegExp("^"+k+"[^\\t\\n]*\\t([^\\n]*)","m")); return m?m[1].trim():""; }
   function latest(list,keyf){ var m={}; list.forEach(function(x){ var k=keyf(x); if(!m[k]||m[k].savedAt<x.savedAt) m[k]=x; }); return Object.keys(m).map(function(k){return m[k];}); }
-  var surveys=[], ALL=[], pres=[];
+  var surveys=[], ALL=[], pres=[], posts=[];
   function del(q,label){
     var k=$("key").value.trim();
     if(!confirm(label+"\n\n삭제한 기록은 되돌릴 수 없습니다. 계속할까요?")) return;
@@ -74,7 +74,8 @@ details.edit summary{cursor:pointer;font-weight:800;font-size:14px;color:var(--n
       if(!res.ok){ $("msg").className="msg err"; $("msg").textContent=res.j.error==="unauthorized"?"키가 맞지 않습니다.":"불러오지 못했습니다 ("+res.j.error+")."; return; }
       try{ sessionStorage.setItem("sf_key",k); }catch(e){}
       var all=res.j.items||[]; ALL=all;
-      items=latest(all.filter(function(x){return x.type!=="survey"&&x.type!=="pre";}),function(x){return x.pid+"|"+x.order+"|"+x.link;});
+      items=latest(all.filter(function(x){return x.type!=="survey"&&x.type!=="pre"&&x.type!=="post";}),function(x){return x.pid+"|"+x.order+"|"+x.link;});
+      posts=latest(all.filter(function(x){return x.type==="post";}),function(x){return x.pid;});
       pres=latest(all.filter(function(x){return x.type==="pre";}),function(x){return x.pid;});
       surveys=latest(all.filter(function(x){return x.type==="survey";}),function(x){return x.pid+"|"+x.skind+"|"+x.n;});
       $("msg").textContent=""; render(all.length);
@@ -141,7 +142,11 @@ details.edit summary{cursor:pointer;font-weight:800;font-size:14px;color:var(--n
     ["finlit","금융 지식 자기평가 (1~7)"],["pt1","신뢰성향1 이유 없는 한 기계를 믿는다"],["pt2","신뢰성향2 기계를 믿지 않는다 (역)"],["pt3","신뢰성향3 기계의 도움에 의지한다"],
     ["pt4","신뢰성향4 기계 신뢰 경향이 높다"],["pt5","신뢰성향5 기계가 제 역할을 할 것이라 믿는다"],["pt6","신뢰성향6 잘 모르는 기계라도 믿는다"],["trustProp","자동화 신뢰 성향 평균 (1~7)"]];
   function preRows(list){ return list.map(function(x){ var a=x.answers||{}, o={"참가자":x.pid}; PREC.forEach(function(c){ o[c[1]]=a[c[0]]==null?"":a[c[0]]; }); o["저장 시각"]=(x.savedAt||"").replace("T"," ").slice(0,19); return o; }); }
-  function xlsx(name,list,preList){
+  var POSTC=[["felt_user","방식A(묻는 것에만 답함) 누가 정했나 (1 내가~7 AI가)"],["felt_mixed","방식B(다음 설명 제안) 누가 정했나 (1 내가~7 AI가)"],
+    ["diff","두 방식 차이 지각"],["prefer","더 편했던 방식"],["prefer_why","고른 이유"],["trust_more","더 믿을 수 있었던 방식"],
+    ["sug_help","제안이 도움 됨 (1~7)"],["sug_hinder","제안이 방해·귀찮음 (1~7)"],["moment","신뢰·의심 순간"],["heard","실험 내용 사전 노출"]];
+  function postRows(list){ return list.map(function(x){ var a=x.answers||{}, o={"참가자":x.pid}; POSTC.forEach(function(c){ o[c[1]]=a[c[0]]==null?"":a[c[0]]; }); o["저장 시각"]=(x.savedAt||"").replace("T"," ").slice(0,19); return o; }); }
+  function xlsx(name,list,preList,postList){
     if(!window.XLSX){ alert("엑셀 변환 도구를 불러오지 못했습니다. 인터넷 연결을 확인하고 새로고침해 주세요."); return; }
     var wb=XLSX.utils.book_new();
     if(list.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(list.map(rowObj),{header:HEAD}),"과제 기록");
@@ -149,6 +154,7 @@ details.edit summary{cursor:pointer;font-weight:800;font-size:14px;color:var(--n
     var sv=surveyRows(list); if(sv.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(sv),"설문 응답");
     var lg=logRows(list); if(lg.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(lg),"상호작용 로그");
     if(preList&&preList.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(preRows(preList)),"사전 설문");
+    if(postList&&postList.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(postRows(postList)),"사후 설문");
     if(!wb.SheetNames.length){ alert("받을 기록이 없습니다."); return; }
     XLSX.writeFile(wb,name); }
   function tsvRow(x){ var t=x.text||"", mm=merged(x); return [x.pid,x.order,x.link,field(t,"조건"),field(t,"시나리오"),field(t,"종목 세트"),field(t,"Agreement"),field(t,"Switch"),field(t,"알아낸 것 정답 수"),field(t,"총 소요"),mm.tlx,mm.tia,x.savedAt].join("\t"); }
@@ -158,10 +164,12 @@ details.edit summary{cursor:pointer;font-weight:800;font-size:14px;color:var(--n
     var full=pids.filter(function(p){ return byP[p].length>=4; }).length;
     var h='<div class="stats"><div><b>'+items.length+' / 80</b><span>저장된 과제 기록</span></div></div>';
     h+='<div class="row"><button class="btn" id="dlJson">분석기용 파일 받기 (.json)</button><button class="btn ghost" id="dlTsv">전체 엑셀 받기 (.xlsx)</button><button class="rst" id="rstAll" style="margin-left:auto">전체 초기화</button></div>';
-    h+='<p class="muted">분석기 1단계의 <b>[파일로 한꺼번에 가져오기]</b>에 .json 파일(또는 전체 엑셀)을 넣으면 과제 기록과 사전 설문이 한 번에 들어갑니다. 같은 과제를 다시 한 경우 가장 최근 기록만 씁니다.</p>';
-    h+='<div class="sec">사전 설문 (20명 예정)</div><div class="tw"><table><thead><tr><th>항목</th><th>기록 수</th><th>파일 받기</th></tr></thead><tbody>'+
+    h+='<p class="muted">분석기 1단계의 <b>[파일로 한꺼번에 가져오기]</b>에 .json 파일(또는 전체 엑셀)을 넣으면 과제 기록과 사전·사후 설문이 한 번에 들어갑니다. 같은 과제를 다시 한 경우 가장 최근 기록만 씁니다.</p>';
+    h+='<div class="sec">사전 · 사후 설문 (각 20명 예정)</div><div class="tw"><table><thead><tr><th>항목</th><th>기록 수</th><th>파일 받기</th></tr></thead><tbody>'+
        '<tr><td><b>사전 설문</b> (/pre)</td><td class="'+(pres.length>=20?'ok':'')+'">'+(pres.length>=20?'✓ ':'')+pres.length+' / 20</td>'+
-       '<td><button class="btn ghost" id="dlPre" style="padding:6px 10px;font-size:12px">엑셀</button> <button class="rst" id="rstPre">초기화</button></td></tr></tbody></table></div>';
+       '<td><button class="btn ghost" id="dlPre" style="padding:6px 10px;font-size:12px">엑셀</button> <button class="rst" id="rstPre">초기화</button></td></tr>'+
+       '<tr><td><b>사후 설문</b> (/post)</td><td class="'+(posts.length>=20?'ok':'')+'">'+(posts.length>=20?'✓ ':'')+posts.length+' / 20</td>'+
+       '<td><button class="btn ghost" id="dlPost" style="padding:6px 10px;font-size:12px">엑셀</button> <button class="rst" id="rstPost">초기화</button></td></tr></tbody></table></div>';
     var LINKS=[["s1","안정 운용 · 사용자 주도 · 세트 A"],["s3","장기 성장 · 사용자 주도 · 세트 A"],["s5","안정 운용 · 혼합 주도 · 세트 A"],["s6","장기 성장 · 혼합 주도 · 세트 A"],
                ["s7","안정 운용 · 사용자 주도 · 세트 B"],["s8","장기 성장 · 사용자 주도 · 세트 B"],["s9","안정 운용 · 혼합 주도 · 세트 B"],["s10","장기 성장 · 혼합 주도 · 세트 B"]];
     h+='<div class="sec">링크별 기록 (각 10개 예정)</div><div class="tw"><table><thead><tr><th>링크</th><th>시나리오 · 조건 · 세트</th><th>기록 수</th><th>파일 받기</th></tr></thead><tbody>';
@@ -170,13 +178,13 @@ details.edit summary{cursor:pointer;font-weight:800;font-size:14px;color:var(--n
          '<td><button class="btn ghost" data-ln="'+L[0]+'" data-fmt="tsv" style="padding:6px 10px;font-size:12px">엑셀</button> <button class="btn ghost" data-ln="'+L[0]+'" data-fmt="json" style="padding:6px 10px;font-size:12px">.json</button> <button class="rst" data-rl="'+L[0]+'">초기화</button></td></tr>'; });
     h+='</tbody></table></div>';
     /* 기록 수정: 잘못 입력된 참가자 번호·순서를 고침 (평소에는 접혀 있음) */
-    var ED=items.concat(pres).slice().sort(function(a,b){ var la=a.type==="pre"?"0":a.link, lb=b.type==="pre"?"0":b.link;
+    var ED=items.concat(pres,posts).slice().sort(function(a,b){ var la=a.type==="pre"?"0":(a.type==="post"?"z":a.link), lb=b.type==="pre"?"0":(b.type==="post"?"z":b.link);
       return la.localeCompare(lb,"ko",{numeric:true})||String(a.pid).localeCompare(String(b.pid),"ko",{numeric:true}); });
     h+='<details class="edit"><summary>기록 수정 (잘못 입력된 참가자 번호·순서 고치기) · '+ED.length+'개</summary>'+
        '<p class="muted">번호나 순서를 고친 뒤 그 줄의 [저장]을 누르세요. 원래 값은 기록 안에 함께 남습니다. 순서는 배정표 기준 몇 번째 과제인지(1~4)입니다.</p>'+
        '<div class="tw"><table><thead><tr><th>구분</th><th>참가자 번호</th><th>순서</th><th>저장 시각</th><th></th></tr></thead><tbody>';
-    ED.forEach(function(x,i){ var pre=x.type==="pre";
-      h+='<tr><td><b>'+(pre?'사전 설문':esc(x.link))+'</b></td><td><input class="ein" data-e="p" data-i="'+i+'" value="'+esc(x.pid)+'"></td>'+
+    ED.forEach(function(x,i){ var pre=x.type==="pre"||x.type==="post";
+      h+='<tr><td><b>'+(x.type==="pre"?'사전 설문':(x.type==="post"?'사후 설문':esc(x.link)))+'</b></td><td><input class="ein" data-e="p" data-i="'+i+'" value="'+esc(x.pid)+'"></td>'+
          '<td>'+(pre?'—':'<input class="ein sm" data-e="o" data-i="'+i+'" value="'+esc(x.order)+'" inputmode="numeric">')+'</td>'+
          '<td>'+esc((x.savedAt||"").replace("T"," ").slice(0,16))+(x.editedAt?' <span class="muted">(수정됨)</span>':'')+'</td>'+
          '<td><button class="btn ghost" data-sv="'+i+'" style="padding:6px 10px;font-size:12px">저장</button> <button class="rst" data-dk="'+i+'">삭제</button></td></tr>'; });
@@ -190,9 +198,11 @@ details.edit summary{cursor:pointer;font-weight:800;font-size:14px;color:var(--n
         .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,j:j}; }); })
         .then(function(res){ if(!res.ok) throw res.j.error; load(); setTimeout(function(){ $("msg").className="msg ok"; $("msg").textContent="수정했습니다: "+res.j.key; },600); })
         .catch(function(e){ $("msg").className="msg err"; $("msg").textContent="수정하지 못했습니다 ("+e+")."; }); }; });
-    $("out").querySelectorAll("[data-dk]").forEach(function(b){ b.onclick=function(){ var x=ED[+b.dataset.dk]; del("target="+encodeURIComponent(x.key),(x.type==="pre"?"사전 설문":x.link)+" · "+x.pid+" 기록 1개를 삭제합니다."); }; });
-    $("dlJson").onclick=function(){ dl("StockFit_기록_"+new Date().toISOString().slice(0,10)+".json",JSON.stringify({items:items.concat(pres)},null,1),"application/json"); };
+    $("out").querySelectorAll("[data-dk]").forEach(function(b){ b.onclick=function(){ var x=ED[+b.dataset.dk]; del("target="+encodeURIComponent(x.key),(x.type==="pre"?"사전 설문":(x.type==="post"?"사후 설문":x.link))+" · "+x.pid+" 기록 1개를 삭제합니다."); }; });
+    $("dlJson").onclick=function(){ dl("StockFit_기록_"+new Date().toISOString().slice(0,10)+".json",JSON.stringify({items:items.concat(pres,posts)},null,1),"application/json"); };
     $("dlPre").onclick=function(){ xlsx("StockFit_사전설문_"+new Date().toISOString().slice(0,10)+".xlsx",[],pres); };
+    $("dlPost").onclick=function(){ xlsx("StockFit_사후설문_"+new Date().toISOString().slice(0,10)+".xlsx",[],[],posts); };
+    $("rstPost").onclick=function(){ del("link=post","사후 설문 기록 "+posts.length+"개를 모두 삭제합니다."); };
     $("rstPre").onclick=function(){ del("link=pre","사전 설문 기록 "+pres.length+"개를 모두 삭제합니다."); };
     $("out").querySelectorAll("[data-ln]").forEach(function(btn){ btn.onclick=function(){
       var ln=btn.dataset.ln, xs=items.filter(function(x){return x.link===ln;}), day=new Date().toISOString().slice(0,10);
@@ -204,7 +214,7 @@ details.edit summary{cursor:pointer;font-weight:800;font-size:14px;color:var(--n
     $("out").querySelectorAll("[data-rk]").forEach(function(b){ b.onclick=function(){ if(!b.dataset.rk) return; del("target="+encodeURIComponent(b.dataset.rk), "이 과제 기록 1개를 삭제합니다. (다시 하기 전 기록까지 모두 지우려면 링크·참가자 초기화를 쓰세요)"); }; });
     $("rstAll").onclick=function(){ var t=prompt("모든 기록(과제·설문)을 삭제합니다. 계속하려면 '전체 삭제'라고 입력하세요."); if(t==="전체 삭제") del("all=1","전체 기록을 삭제합니다."); };
     $("dlTsv").onclick=function(){ var cols=["참가자","그룹","순서","링크","조건","시나리오","종목 세트","Agreement","Switch","알아낸 것 정답 수","총 소요(초)","TLX","지각 난이도","몰입도","TIA(블록)","조작 확인","저장 시각"];
-      xlsx("StockFit_전체_"+new Date().toISOString().slice(0,10)+".xlsx",items,pres); };
+      xlsx("StockFit_전체_"+new Date().toISOString().slice(0,10)+".xlsx",items,pres,posts); };
   }
 })();
 </script>

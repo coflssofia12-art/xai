@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>사후 설문</title>
+<style>
+:root{--navy:#243484;--ink:#1A1F36;--muted:#646D8C;--line:#E4E8F4;--paper:#F5F7FC;--ok:#1E7A4E;--ok-bg:#EAF6EF;--warn:#B4331F}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+  padding:env(safe-area-inset-top,0) 0 calc(env(safe-area-inset-bottom,0px) + 90px);-webkit-text-size-adjust:100%}
+.hd{background:var(--navy);color:#fff;padding:28px 20px 22px}
+.hd small{font-size:12px;opacity:.7;font-weight:700;letter-spacing:.04em}
+.hd h1{margin:6px 0 4px;font-size:22px;letter-spacing:-.02em}
+.hd p{margin:0;font-size:13px;opacity:.8;line-height:1.5}
+.wrap{max-width:520px;margin:0 auto;padding:18px 16px}
+.pid{background:#fff;border:2px solid var(--navy);border-radius:14px;padding:14px 16px;margin-bottom:16px}
+.pid label{display:block;font-size:13px;font-weight:800;color:var(--navy);margin-bottom:8px}
+.pid input{width:100%;font:inherit;font-size:18px;font-weight:700;padding:11px 12px;border:1px solid var(--line);border-radius:10px;text-transform:uppercase}
+.pid.miss{border-color:var(--warn)}
+.sec{font-size:13px;font-weight:800;color:var(--navy);margin:18px 0 8px}
+.q{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+.q.miss{border-color:var(--warn)}
+.qt{font-weight:700;font-size:14.5px;line-height:1.5;margin-bottom:10px}
+.qt b{color:var(--navy);margin-right:4px}
+.lk{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.lk button,.ch button{font:inherit;font-weight:800;font-size:14px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
+.lk button{padding:10px 0}.ch{display:flex;flex-wrap:wrap;gap:6px}.ch button{padding:9px 12px;font-weight:700}
+.lk button.on,.ch button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.anch{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:6px}
+.q input{width:100%;font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:10px}
+.btn{display:flex;align-items:center;justify-content:center;width:100%;font:inherit;font-weight:800;font-size:15px;border:0;border-radius:12px;padding:15px;background:var(--navy);color:#fff;cursor:pointer;margin-top:8px}
+.btn[disabled]{opacity:.4}
+.msg{font-size:13.5px;font-weight:700;border-radius:10px;padding:12px 14px;margin-top:12px;display:none}
+.msg.err{display:block;background:#FBE9E5;color:var(--warn)}.msg.ok{display:block;background:var(--ok-bg);color:var(--ok)}
+</style>
+</head>
+<body>
+<div class="hd"><small>STOCKFIT AI 실험</small><h1>사후 설문</h1><p>4개 과제를 모두 마친 뒤에 답해 주세요. 두 가지 AI 대화 방식을 비교해 여쭙니다. 정답은 없습니다. (약 3분)</p></div>
+<div class="wrap" id="app"></div>
+<script>
+(function(){
+  "use strict";
+  var FREQ=["거의 안 함","월 1~2회","주 1~2회","주 3회 이상","매일"], AG=["전혀 그렇지 않다","매우 그렇다"];
+  var AB=["방식 A (내가 묻는 것에만 답한 AI)","방식 B (답한 뒤 다음 설명을 제안한 AI)","차이 없음"];
+  var ITEMS=[
+    {sec:"두 가지 방식 안내 — 방식 A: 내가 질문한 것에만 답한 AI / 방식 B: 답한 뒤 \"○○도 볼까요?\"처럼 다음 설명을 제안한 AI"},
+    {sec:"A. 다음 설명을 누가 정했나 (1 = 내가 정했다, 7 = AI가 정했다)"},
+    {id:"felt_user",type:"lik",q:"방식 A에서 다음에 볼 설명은 누가 정했다고 느꼈나요?",a:["내가 정했다","AI가 정했다"]},
+    {id:"felt_mixed",type:"lik",q:"방식 B에서 다음에 볼 설명은 누가 정했다고 느꼈나요?",a:["내가 정했다","AI가 정했다"]},
+    {sec:"B. 두 방식 비교"},
+    {id:"diff",type:"choice",q:"두 방식의 차이를 느꼈나요?",opts:["뚜렷하게 느꼈다","조금 느꼈다","느끼지 못했다"]},
+    {id:"prefer",type:"choice",q:"어느 방식이 더 편했나요?",opts:AB},
+    {id:"prefer_why",type:"text",q:"그렇게 고른 이유를 짧게 적어 주세요."},
+    {id:"trust_more",type:"choice",q:"어느 방식의 추천을 더 믿을 수 있었나요?",opts:AB},
+    {sec:"C. 방식 B의 제안에 대해 (1 = 전혀 그렇지 않다, 7 = 매우 그렇다)"},
+    {id:"sug_help",type:"lik",q:"AI의 다음 설명 제안은 판단에 도움이 됐다",a:AG},
+    {id:"sug_hinder",type:"lik",q:"AI의 다음 설명 제안은 방해되거나 귀찮았다",a:AG},
+    {id:"moment",type:"text",q:"AI 추천을 믿게 되거나 의심하게 된 순간이 있었다면 적어 주세요. (없으면 \"없음\")"},
+    {sec:"D. 확인"},
+    {id:"heard",type:"choice",q:"이 실험의 내용을 참여 전에 다른 사람에게 들은 적이 있나요?",opts:["없다","있다"]}];
+  var app=document.getElementById("app"), ans={};
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];}); }
+  function cleanPid(v){ v=String(v||"").trim().toUpperCase().replace(/[^A-Z0-9_-]/g,""); var m=v.match(/^P([0-9O]{1,3})$/);
+    if(m){ var d=m[1].replace(/O/g,"0"); v="P"+(d.length<2?"0"+d:d); } return v; }
+  var qp=(location.search.match(/[?&]p=([^&]*)/)||[])[1];
+  var h='<div class="pid" id="pidBox"><label for="pidIn">참가자 번호</label><input id="pidIn" autocomplete="off" placeholder="예: P01 (P 다음은 숫자 0)" value="'+esc(qp?cleanPid(decodeURIComponent(qp)):"")+'"></div>', n=0;
+  ITEMS.forEach(function(it){
+    if(it.sec){ h+='<div class="sec">'+esc(it.sec)+'</div>'; return; }
+    n++; h+='<div class="q" data-q="'+it.id+'"><div class="qt"><b>'+n+'.</b>'+esc(it.q)+'</div>';
+    if(it.type==="lik"){ h+='<div class="lk">'; for(var v=1;v<=7;v++) h+='<button type="button" data-v="'+v+'">'+v+'</button>'; h+='</div><div class="anch"><span>'+esc(it.a[0])+'</span><span>'+esc(it.a[1])+'</span></div>'; }
+    else if(it.type==="choice"){ h+='<div class="ch">'; it.opts.forEach(function(o){ h+='<button type="button" data-v="'+esc(o)+'">'+esc(o)+'</button>'; }); h+='</div>'; }
+    else if(it.type==="num") h+='<input type="number" inputmode="numeric" min="10" max="99">';
+    else h+='<input type="text">';
+    h+='</div>'; });
+  h+='<button class="btn" id="go">제출하기</button><div class="msg" id="msg" role="status"></div>';
+  app.innerHTML=h;
+  app.querySelectorAll(".q").forEach(function(q){ var id=q.dataset.q;
+    q.querySelectorAll("button[data-v]").forEach(function(b){ b.addEventListener("click",function(){
+      q.querySelectorAll("button[data-v]").forEach(function(x){x.classList.remove("on");}); b.classList.add("on");
+      ans[id]=isNaN(+b.dataset.v)?b.dataset.v:+b.dataset.v; q.classList.remove("miss"); }); });
+    var t=q.querySelector("input"); if(t) t.addEventListener("input",function(){ var v=t.value.trim(); if(v){ ans[id]=t.type==="number"?+v:v; q.classList.remove("miss"); } else delete ans[id]; }); });
+  document.getElementById("pidIn").addEventListener("input",function(){ document.getElementById("pidBox").classList.remove("miss"); });
+  var go=document.getElementById("go"), msg=document.getElementById("msg");
+  go.addEventListener("click",function(){
+    var pid=cleanPid(document.getElementById("pidIn").value);
+    if(!pid){ document.getElementById("pidBox").classList.add("miss"); window.scrollTo(0,0); msg.className="msg err"; msg.textContent="참가자 번호를 입력해 주세요."; return; }
+    var need=ITEMS.filter(function(it){ return it.id&&!(it.id in ans); });
+    if(need.length){ need.forEach(function(it){ app.querySelector('[data-q="'+it.id+'"]').classList.add("miss"); });
+      app.querySelector('[data-q="'+need[0].id+'"]').scrollIntoView({block:"center",behavior:"smooth"});
+      msg.className="msg err"; msg.textContent="빨간 테두리 문항에 답해 주세요 ("+need.length+"개)."; return; }
+    var out=Object.assign({},ans);
+    go.disabled=true; msg.className="msg"; msg.style.display="block"; msg.textContent="저장 중…";
+    fetch("/api/log",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"post",pid:pid,answers:out})})
+      .then(function(r){ if(!r.ok) throw 0;
+        app.querySelectorAll(".q,.sec,.pid").forEach(function(x){x.style.display="none";}); go.style.display="none";
+        msg.className="msg ok"; msg.textContent="✓ 사후 설문이 저장되었습니다 ("+pid+"). 실험이 모두 끝났습니다. 참여해 주셔서 감사합니다. 실험 내용은 다른 분께 말하지 말아 주세요."; window.scrollTo(0,0); })
+      .catch(function(){ go.disabled=false; msg.className="msg err"; msg.textContent="저장하지 못했습니다. 인터넷 연결을 확인하고 다시 [제출하기]를 눌러 주세요."; });
+  });
+})();
+</script>
+</body>
+</html>
