@@ -33,70 +33,87 @@ body{margin:0;background:var(--paper);color:var(--ink);font-family:"Pretendard",
 .btn[disabled]{opacity:.4}
 .msg{font-size:13.5px;font-weight:700;border-radius:10px;padding:12px 14px;margin-top:12px;display:none}
 .msg.err{display:block;background:#FBE9E5;color:var(--warn)}.msg.ok{display:block;background:var(--ok-bg);color:var(--ok)}
+.reveal{background:#fff;border:2px solid var(--navy);border-radius:14px;padding:14px 16px;margin:4px 0 6px;font-size:14px;line-height:1.65}
+.reveal b{color:var(--navy)}
+.step{font-size:12px;font-weight:800;color:var(--muted);margin:2px 0 10px}
+.debrief{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:12px;font-size:14px;line-height:1.7}
+.debrief h3{margin:0 0 6px;font-size:15px;color:var(--navy)}
 </style>
 </head>
 <body>
-<div class="hd"><small>STOCKFIT AI 실험</small><h1>사후 설문</h1><p>4개 과제를 모두 마친 뒤에 답해 주세요. 두 가지 AI 대화 방식을 비교해 여쭙니다. 정답은 없습니다. (약 3분)</p></div>
+<div class="hd"><small>STOCKFIT AI 실험</small><h1>사후 설문</h1><p>4개 과제를 모두 마친 뒤에 답해 주세요. 정답은 없으니 느낀 대로 답해 주세요. (약 3분)</p></div>
 <div class="wrap" id="app"></div>
 <script>
 (function(){
   "use strict";
-  var FREQ=["거의 안 함","월 1~2회","주 1~2회","주 3회 이상","매일"], AG=["전혀 그렇지 않다","매우 그렇다"];
-  var AB=["방식 A (내가 묻는 것에만 답한 AI)","방식 B (답한 뒤 다음 설명을 제안한 AI)","차이 없음"];
-  var ITEMS=[
-    {sec:"두 가지 방식 안내 — 방식 A: 내가 질문한 것에만 답한 AI / 방식 B: 답한 뒤 \"○○도 볼까요?\"처럼 다음 설명을 제안한 AI"},
-    {sec:"A. 다음 설명을 누가 정했나 (1 = 내가 정했다, 7 = AI가 정했다)"},
+  var AG=["전혀 그렇지 않다","매우 그렇다"], AB=["방식 A (내가 묻는 것에만 답한 AI)","방식 B (답한 뒤 다음 설명을 제안한 AI)","차이 없음"];
+  /* 1쪽: 설명 없이 먼저 묻기 (스스로 차이를 알아챘는지) → 2쪽: 두 방식 설명 공개 후 비교 질문 */
+  var P1=[
+    {id:"noticed",type:"choice",q:"4번의 과제에서 AI가 대화하는 방식에 차이가 있었나요?",opts:["있었다","없었다","잘 모르겠다"]},
+    {id:"noticed_what",type:"text",q:"있었다면 무엇이 달랐나요? (없거나 모르겠으면 \"없음\")"}];
+  var P2=[
+    {sec:"A. 다음에 볼 설명은 누가 정했나 (1 = 내가 정했다, 7 = AI가 정했다)"},
     {id:"felt_user",type:"lik",q:"방식 A에서 다음에 볼 설명은 누가 정했다고 느꼈나요?",a:["내가 정했다","AI가 정했다"]},
     {id:"felt_mixed",type:"lik",q:"방식 B에서 다음에 볼 설명은 누가 정했다고 느꼈나요?",a:["내가 정했다","AI가 정했다"]},
     {sec:"B. 두 방식 비교"},
-    {id:"diff",type:"choice",q:"두 방식의 차이를 느꼈나요?",opts:["뚜렷하게 느꼈다","조금 느꼈다","느끼지 못했다"]},
     {id:"prefer",type:"choice",q:"어느 방식이 더 편했나요?",opts:AB},
     {id:"prefer_why",type:"text",q:"그렇게 고른 이유를 짧게 적어 주세요."},
     {id:"trust_more",type:"choice",q:"어느 방식의 추천을 더 믿을 수 있었나요?",opts:AB},
     {sec:"C. 방식 B의 제안에 대해 (1 = 전혀 그렇지 않다, 7 = 매우 그렇다)"},
     {id:"sug_help",type:"lik",q:"AI의 다음 설명 제안은 판단에 도움이 됐다",a:AG},
     {id:"sug_hinder",type:"lik",q:"AI의 다음 설명 제안은 방해되거나 귀찮았다",a:AG},
-    {id:"moment",type:"text",q:"AI 추천을 믿게 되거나 의심하게 된 순간이 있었다면 적어 주세요. (없으면 \"없음\")"},
-    {sec:"D. 확인"},
-    {id:"heard",type:"choice",q:"이 실험의 내용을 참여 전에 다른 사람에게 들은 적이 있나요?",opts:["없다","있다"]}];
-  var app=document.getElementById("app"), ans={};
+    {id:"moment",type:"text",q:"AI 추천을 믿게 되거나 의심하게 된 순간이 있었다면 적어 주세요. (없으면 \"없음\")"}];
+  var app=document.getElementById("app"), ans={}, pid="";
   function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];}); }
   function cleanPid(v){ v=String(v||"").trim().toUpperCase().replace(/[^A-Z0-9_-]/g,""); var m=v.match(/^P([0-9O]{1,3})$/);
     if(m){ var d=m[1].replace(/O/g,"0"); v="P"+(d.length<2?"0"+d:d); } return v; }
-  var qp=(location.search.match(/[?&]p=([^&]*)/)||[])[1];
-  var h='<div class="pid" id="pidBox"><label for="pidIn">참가자 번호</label><input id="pidIn" autocomplete="off" placeholder="예: P01 (P 다음은 숫자 0)" value="'+esc(qp?cleanPid(decodeURIComponent(qp)):"")+'"></div>', n=0;
-  ITEMS.forEach(function(it){
-    if(it.sec){ h+='<div class="sec">'+esc(it.sec)+'</div>'; return; }
-    n++; h+='<div class="q" data-q="'+it.id+'"><div class="qt"><b>'+n+'.</b>'+esc(it.q)+'</div>';
-    if(it.type==="lik"){ h+='<div class="lk">'; for(var v=1;v<=7;v++) h+='<button type="button" data-v="'+v+'">'+v+'</button>'; h+='</div><div class="anch"><span>'+esc(it.a[0])+'</span><span>'+esc(it.a[1])+'</span></div>'; }
-    else if(it.type==="choice"){ h+='<div class="ch">'; it.opts.forEach(function(o){ h+='<button type="button" data-v="'+esc(o)+'">'+esc(o)+'</button>'; }); h+='</div>'; }
-    else if(it.type==="num") h+='<input type="number" inputmode="numeric" min="10" max="99">';
-    else h+='<input type="text">';
-    h+='</div>'; });
-  h+='<button class="btn" id="go">제출하기</button><div class="msg" id="msg" role="status"></div>';
-  app.innerHTML=h;
-  app.querySelectorAll(".q").forEach(function(q){ var id=q.dataset.q;
-    q.querySelectorAll("button[data-v]").forEach(function(b){ b.addEventListener("click",function(){
-      q.querySelectorAll("button[data-v]").forEach(function(x){x.classList.remove("on");}); b.classList.add("on");
-      ans[id]=isNaN(+b.dataset.v)?b.dataset.v:+b.dataset.v; q.classList.remove("miss"); }); });
-    var t=q.querySelector("input"); if(t) t.addEventListener("input",function(){ var v=t.value.trim(); if(v){ ans[id]=t.type==="number"?+v:v; q.classList.remove("miss"); } else delete ans[id]; }); });
-  document.getElementById("pidIn").addEventListener("input",function(){ document.getElementById("pidBox").classList.remove("miss"); });
-  var go=document.getElementById("go"), msg=document.getElementById("msg");
-  go.addEventListener("click",function(){
-    var pid=cleanPid(document.getElementById("pidIn").value);
-    if(!pid){ document.getElementById("pidBox").classList.add("miss"); window.scrollTo(0,0); msg.className="msg err"; msg.textContent="참가자 번호를 입력해 주세요."; return; }
-    var need=ITEMS.filter(function(it){ return it.id&&!(it.id in ans); });
+  function renderItems(list,start){ var h="", n=start||0;
+    list.forEach(function(it){
+      if(it.sec){ h+='<div class="sec">'+esc(it.sec)+'</div>'; return; }
+      n++; h+='<div class="q" data-q="'+it.id+'"><div class="qt"><b>'+n+'.</b>'+esc(it.q)+'</div>';
+      if(it.type==="lik"){ h+='<div class="lk">'; for(var v=1;v<=7;v++) h+='<button type="button" data-v="'+v+'">'+v+'</button>'; h+='</div><div class="anch"><span>'+esc(it.a[0])+'</span><span>'+esc(it.a[1])+'</span></div>'; }
+      else if(it.type==="choice"){ h+='<div class="ch">'; it.opts.forEach(function(o){ h+='<button type="button" data-v="'+esc(o)+'">'+esc(o)+'</button>'; }); h+='</div>'; }
+      else h+='<input type="text">';
+      h+='</div>'; });
+    return h; }
+  function bind(){
+    app.querySelectorAll(".q").forEach(function(q){ var id=q.dataset.q;
+      q.querySelectorAll("button[data-v]").forEach(function(b){ b.addEventListener("click",function(){
+        q.querySelectorAll("button[data-v]").forEach(function(x){x.classList.remove("on");}); b.classList.add("on");
+        ans[id]=isNaN(+b.dataset.v)?b.dataset.v:+b.dataset.v; q.classList.remove("miss"); }); });
+      var t=q.querySelector("input"); if(t) t.addEventListener("input",function(){ var v=t.value.trim(); if(v){ ans[id]=v; q.classList.remove("miss"); } else delete ans[id]; }); }); }
+  function check(list,msg){ var need=list.filter(function(it){ return it.id&&!(it.id in ans); });
     if(need.length){ need.forEach(function(it){ app.querySelector('[data-q="'+it.id+'"]').classList.add("miss"); });
       app.querySelector('[data-q="'+need[0].id+'"]').scrollIntoView({block:"center",behavior:"smooth"});
-      msg.className="msg err"; msg.textContent="빨간 테두리 문항에 답해 주세요 ("+need.length+"개)."; return; }
-    var out=Object.assign({},ans);
-    go.disabled=true; msg.className="msg"; msg.style.display="block"; msg.textContent="저장 중…";
-    fetch("/api/log",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"post",pid:pid,answers:out})})
-      .then(function(r){ if(!r.ok) throw 0;
-        app.querySelectorAll(".q,.sec,.pid").forEach(function(x){x.style.display="none";}); go.style.display="none";
-        msg.className="msg ok"; msg.textContent="✓ 사후 설문이 저장되었습니다 ("+pid+"). 실험이 모두 끝났습니다. 참여해 주셔서 감사합니다. 실험 내용은 다른 분께 말하지 말아 주세요."; window.scrollTo(0,0); })
-      .catch(function(){ go.disabled=false; msg.className="msg err"; msg.textContent="저장하지 못했습니다. 인터넷 연결을 확인하고 다시 [제출하기]를 눌러 주세요."; });
-  });
+      msg.className="msg err"; msg.textContent="빨간 테두리 문항에 답해 주세요 ("+need.length+"개)."; return false; } return true; }
+
+  /* ── 1쪽 ── */
+  var qp=(location.search.match(/[?&]p=([^&]*)/)||[])[1];
+  app.innerHTML='<div class="step">1 / 2</div><div class="pid" id="pidBox"><label for="pidIn">참가자 번호</label><input id="pidIn" autocomplete="off" placeholder="예: P01 (P 다음은 숫자 0)" value="'+esc(qp?cleanPid(decodeURIComponent(qp)):"")+'"></div>'+
+    renderItems(P1,0)+'<button class="btn" id="next">다음</button><div class="msg" id="msg" role="status"></div>';
+  bind();
+  document.getElementById("pidIn").addEventListener("input",function(){ document.getElementById("pidBox").classList.remove("miss"); });
+  document.getElementById("next").addEventListener("click",function(){
+    var msg=document.getElementById("msg"); pid=cleanPid(document.getElementById("pidIn").value);
+    if(!pid){ document.getElementById("pidBox").classList.add("miss"); window.scrollTo(0,0); msg.className="msg err"; msg.textContent="참가자 번호를 입력해 주세요."; return; }
+    if(!check(P1,msg)) return;
+    page2(); });
+
+  /* ── 2쪽: 두 방식 설명 공개 ── */
+  function page2(){
+    app.innerHTML='<div class="step">2 / 2</div><div class="reveal">오늘 사용한 AI는 두 가지 방식으로 대화했습니다.<br><b>방식 A</b> — 내가 질문한 것에만 답한 AI<br><b>방식 B</b> — 답한 뒤 "○○도 볼까요?"처럼 <b>다음 설명을 제안</b>한 AI<br>이 설명을 참고해 아래 문항에 답해 주세요.</div>'+
+      renderItems(P2,2)+'<button class="btn" id="go">제출하기</button><div class="msg" id="msg" role="status"></div>';
+    bind(); window.scrollTo(0,0);
+    document.getElementById("go").addEventListener("click",function(){
+      var go=this, msg=document.getElementById("msg"); if(!check(P2,msg)) return;
+      go.disabled=true; msg.className="msg"; msg.style.display="block"; msg.textContent="저장 중…";
+      fetch("/api/log",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"post",pid:pid,answers:ans})})
+        .then(function(r){ if(!r.ok) throw 0;
+          app.innerHTML='<div class="msg ok">✓ 사후 설문이 저장되었습니다 ('+esc(pid)+'). 실험이 모두 끝났습니다. 참여해 주셔서 감사합니다.</div>'+
+            '<div class="debrief"><h3>이 실험에 대해</h3>이 실험은 AI 추천 서비스에서 AI가 <b>다음에 볼 설명을 먼저 제안하는 방식</b>과 <b>묻는 것에만 답하는 방식</b>이 추천에 대한 신뢰와 판단의 부담에 어떤 차이를 주는지 알아보는 연구입니다.<br><br>화면에 나온 종목 수치는 실험을 위해 만든 <b>가상 수치</b>이며 실제 투자 정보가 아닙니다.<br><br>다른 참가자의 결과에 영향을 주지 않도록, <b>실험 내용은 다른 분께 말하지 말아 주세요.</b></div>';
+          window.scrollTo(0,0); })
+        .catch(function(){ go.disabled=false; msg.className="msg err"; msg.textContent="저장하지 못했습니다. 인터넷 연결을 확인하고 다시 [제출하기]를 눌러 주세요."; });
+    }); }
 })();
 </script>
 </body>

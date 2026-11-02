@@ -142,9 +142,10 @@ details.edit summary{cursor:pointer;font-weight:800;font-size:14px;color:var(--n
     ["finlit","금융 지식 자기평가 (1~7)"],["pt1","신뢰성향1 이유 없는 한 기계를 믿는다"],["pt2","신뢰성향2 기계를 믿지 않는다 (역)"],["pt3","신뢰성향3 기계의 도움에 의지한다"],
     ["pt4","신뢰성향4 기계 신뢰 경향이 높다"],["pt5","신뢰성향5 기계가 제 역할을 할 것이라 믿는다"],["pt6","신뢰성향6 잘 모르는 기계라도 믿는다"],["trustProp","자동화 신뢰 성향 평균 (1~7)"]];
   function preRows(list){ return list.map(function(x){ var a=x.answers||{}, o={"참가자":x.pid}; PREC.forEach(function(c){ o[c[1]]=a[c[0]]==null?"":a[c[0]]; }); o["저장 시각"]=(x.savedAt||"").replace("T"," ").slice(0,19); return o; }); }
-  var POSTC=[["felt_user","방식A(묻는 것에만 답함) 누가 정했나 (1 내가~7 AI가)"],["felt_mixed","방식B(다음 설명 제안) 누가 정했나 (1 내가~7 AI가)"],
-    ["diff","두 방식 차이 지각"],["prefer","더 편했던 방식"],["prefer_why","고른 이유"],["trust_more","더 믿을 수 있었던 방식"],
-    ["sug_help","제안이 도움 됨 (1~7)"],["sug_hinder","제안이 방해·귀찮음 (1~7)"],["moment","신뢰·의심 순간"],["heard","실험 내용 사전 노출"]];
+  var POSTC=[["noticed","(설명 전) 대화 방식 차이 알아챔"],["noticed_what","(설명 전) 무엇이 달랐나"],
+    ["felt_user","방식A(묻는 것에만 답함) 누가 정했나 (1 내가~7 AI가)"],["felt_mixed","방식B(다음 설명 제안) 누가 정했나 (1 내가~7 AI가)"],
+    ["prefer","더 편했던 방식"],["prefer_why","고른 이유"],["trust_more","더 믿을 수 있었던 방식"],
+    ["sug_help","제안이 도움 됨 (1~7)"],["sug_hinder","제안이 방해·귀찮음 (1~7)"],["moment","신뢰·의심 순간"]];
   function postRows(list){ return list.map(function(x){ var a=x.answers||{}, o={"참가자":x.pid}; POSTC.forEach(function(c){ o[c[1]]=a[c[0]]==null?"":a[c[0]]; }); o["저장 시각"]=(x.savedAt||"").replace("T"," ").slice(0,19); return o; }); }
   function xlsx(name,list,preList,postList){
     if(!window.XLSX){ alert("엑셀 변환 도구를 불러오지 못했습니다. 인터넷 연결을 확인하고 새로고침해 주세요."); return; }
