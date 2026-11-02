@@ -2,6 +2,7 @@
 // 저장 위치: Netlify Blobs 저장소 "stockfit-logs"
 //   과제 기록: <링크>/<참가자번호>_<순서>_<저장시각>   예) s5/P01_1_1730350000000
 //   사전 설문: pre/<참가자번호>_<저장시각>            예) pre/P01_1730340000000
+//   사후 설문: post/<참가자번호>_<저장시각>           예) post/P01_1730360000000
 // POST   /api/log                     {pid, group, order, link, text, survey}
 // GET    /api/log?key=…               전체 기록 (Netlify 환경변수 RESULTS_KEY 와 일치해야 함)
 // DELETE /api/log?key=…&link=s5 (사전 설문은 link=pre) | &pid=P01 | &target=<기록 이름> | &all=1
@@ -25,12 +26,12 @@ export default async (req) => {
     const pm = pid.match(/^P([0-9O]{1,3})$/);
     if (pm) { const d = pm[1].replace(/O/g, "0"); pid = "P" + (d.length < 2 ? "0" + d : d); }   // PO1·P1 → P01
 
-    // 사전 설문: pre/<참가자번호>_<저장시각>
-    if (b.kind === "pre") {
+    // 사전·사후 설문: pre/<참가자번호>_<저장시각>, post/<참가자번호>_<저장시각>
+    if (b.kind === "pre" || b.kind === "post") {
       const answers = b.answers && typeof b.answers === "object" && JSON.stringify(b.answers).length < 20000 ? b.answers : null;
       if (!pid || !answers) return json({ error: "bad_data" }, 400);
-      const key = `pre/${pid}_${Date.now()}`;
-      await store.setJSON(key, { type: "pre", pid, answers, savedAt: new Date().toISOString() });
+      const key = `${b.kind}/${pid}_${Date.now()}`;
+      await store.setJSON(key, { type: b.kind, pid, answers, savedAt: new Date().toISOString() });
       return json({ ok: true, key });
     }
 
@@ -52,7 +53,7 @@ export default async (req) => {
     const items = [];
     for (const bl of blobs) {
       const v = await store.get(bl.key, { type: "json" });
-      if (v && v.type === "pre") items.push({ key: bl.key, ...v });
+      if (v && (v.type === "pre" || v.type === "post")) items.push({ key: bl.key, ...v });
       else if (v && v.link) items.push({ key: bl.key, type: "task", ...v });
     }
     items.sort((a, b) => LINKS.indexOf(a.link) - LINKS.indexOf(b.link) || String(a.pid).localeCompare(String(b.pid), "ko", { numeric: true }));
@@ -85,10 +86,11 @@ export default async (req) => {
     if (!pid) return json({ error: "bad_data" }, 400);
     const [lk, rest = ""] = target.split("/");
     const stamp = rest.split("_").pop();
-    const order = v.type === "pre" ? undefined : (b.order === undefined || b.order === "" ? (Number(v.order) || 0) : (Number(b.order) || 0));
-    const nkey = v.type === "pre" ? `pre/${pid}_${stamp}` : `${lk}/${pid}_${order}_${stamp}`;
+    const isSv = v.type === "pre" || v.type === "post";
+    const order = isSv ? undefined : (b.order === undefined || b.order === "" ? (Number(v.order) || 0) : (Number(b.order) || 0));
+    const nkey = isSv ? `${v.type}/${pid}_${stamp}` : `${lk}/${pid}_${order}_${stamp}`;
     const nv = { ...v, pid, editedAt: new Date().toISOString(), editedFrom: { pid: v.pid, order: v.order } };
-    if (v.type !== "pre") nv.order = order;
+    if (!isSv) nv.order = order;
     await store.setJSON(nkey, nv);
     if (nkey !== target) await store.delete(target);
     return json({ ok: true, key: nkey });
