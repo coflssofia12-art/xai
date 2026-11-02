@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>사전 설문</title>
+<style>
+:root{--navy:#243484;--ink:#1A1F36;--muted:#646D8C;--line:#E4E8F4;--paper:#F5F7FC;--ok:#1E7A4E;--ok-bg:#EAF6EF;--warn:#B4331F}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+  padding:env(safe-area-inset-top,0) 0 calc(env(safe-area-inset-bottom,0px) + 90px);-webkit-text-size-adjust:100%}
+.hd{background:var(--navy);color:#fff;padding:28px 20px 22px}
+.hd small{font-size:12px;opacity:.7;font-weight:700;letter-spacing:.04em}
+.hd h1{margin:6px 0 4px;font-size:22px;letter-spacing:-.02em}
+.hd p{margin:0;font-size:13px;opacity:.8;line-height:1.5}
+.wrap{max-width:520px;margin:0 auto;padding:18px 16px}
+.pid{background:#fff;border:2px solid var(--navy);border-radius:14px;padding:14px 16px;margin-bottom:16px}
+.pid label{display:block;font-size:13px;font-weight:800;color:var(--navy);margin-bottom:8px}
+.pid input{width:100%;font:inherit;font-size:18px;font-weight:700;padding:11px 12px;border:1px solid var(--line);border-radius:10px;text-transform:uppercase}
+.pid.miss{border-color:var(--warn)}
+.sec{font-size:13px;font-weight:800;color:var(--navy);margin:18px 0 8px}
+.q{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+.q.miss{border-color:var(--warn)}
+.qt{font-weight:700;font-size:14.5px;line-height:1.5;margin-bottom:10px}
+.qt b{color:var(--navy);margin-right:4px}
+.lk{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.lk button,.ch button{font:inherit;font-weight:800;font-size:14px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
+.lk button{padding:10px 0}.ch{display:flex;flex-wrap:wrap;gap:6px}.ch button{padding:9px 12px;font-weight:700}
+.lk button.on,.ch button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.anch{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:6px}
+.q input{width:100%;font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:10px}
+.btn{display:flex;align-items:center;justify-content:center;width:100%;font:inherit;font-weight:800;font-size:15px;border:0;border-radius:12px;padding:15px;background:var(--navy);color:#fff;cursor:pointer;margin-top:8px}
+.btn[disabled]{opacity:.4}
+.msg{font-size:13.5px;font-weight:700;border-radius:10px;padding:12px 14px;margin-top:12px;display:none}
+.msg.err{display:block;background:#FBE9E5;color:var(--warn)}.msg.ok{display:block;background:var(--ok-bg);color:var(--ok)}
+</style>
+</head>
+<body>
+<div class="hd"><small>STOCKFIT AI 실험</small><h1>사전 설문</h1><p>실험을 시작하기 전에 기본 정보를 여쭙니다. 정답은 없으니 평소 생각대로 답해 주세요. (약 3분)</p></div>
+<div class="wrap" id="app"></div>
+<script>
+(function(){
+  "use strict";
+  var FREQ=["거의 안 함","월 1~2회","주 1~2회","주 3회 이상","매일"], AG=["전혀 그렇지 않다","매우 그렇다"];
+  var ITEMS=[
+    {sec:"A. 기본 정보"},
+    {id:"age",type:"num",q:"나이 (만 나이)"},
+    {id:"gender",type:"choice",q:"성별",opts:["남성","여성","응답하지 않음"]},
+    {id:"job",type:"text",q:"전공 또는 직업"},
+    {sec:"B. 투자·금융·AI 경험"},
+    {id:"invest",type:"choice",q:"주식 투자 경험",opts:["없음","1년 미만","1~3년","3년 이상"]},
+    {id:"finapp",type:"choice",q:"금융·증권 앱 사용 빈도",opts:FREQ},
+    {id:"aichat",type:"choice",q:"AI 챗봇(ChatGPT 등) 사용 빈도",opts:FREQ},
+    {id:"finlit",type:"lik",q:"나는 주식·금융 지식이 많은 편이다",a:AG},
+    {sec:"C. 평소 기계·자동화 시스템에 대한 생각 (1 = 전혀 그렇지 않다, 7 = 매우 그렇다)"},
+    {id:"pt1",type:"lik",q:"나는 특별한 이유가 없는 한 기계를 믿는 편이다",a:AG},
+    {id:"pt2",type:"lik",q:"대체로 나는 기계를 믿지 않는다",a:AG},
+    {id:"pt3",type:"lik",q:"일반적으로 나는 기계의 도움에 의지하는 편이다",a:AG},
+    {id:"pt4",type:"lik",q:"기계를 신뢰하는 나의 경향은 높은 편이다",a:AG},
+    {id:"pt5",type:"lik",q:"나는 기계가 제 역할을 할 것이라고 쉽게 믿는다",a:AG},
+    {id:"pt6",type:"lik",q:"나는 잘 모르는 기계라도 믿는 편이다",a:AG}];
+  var app=document.getElementById("app"), ans={};
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];}); }
+  function cleanPid(v){ v=String(v||"").trim().toUpperCase().replace(/[^A-Z0-9_-]/g,""); var m=v.match(/^P([0-9O]{1,3})$/);
+    if(m){ var d=m[1].replace(/O/g,"0"); v="P"+(d.length<2?"0"+d:d); } return v; }
+  var qp=(location.search.match(/[?&]p=([^&]*)/)||[])[1];
+  var h='<div class="pid" id="pidBox"><label for="pidIn">참가자 번호</label><input id="pidIn" autocomplete="off" placeholder="예: P01 (P 다음은 숫자 0)" value="'+esc(qp?cleanPid(decodeURIComponent(qp)):"")+'"></div>', n=0;
+  ITEMS.forEach(function(it){
+    if(it.sec){ h+='<div class="sec">'+esc(it.sec)+'</div>'; return; }
+    n++; h+='<div class="q" data-q="'+it.id+'"><div class="qt"><b>'+n+'.</b>'+esc(it.q)+'</div>';
+    if(it.type==="lik"){ h+='<div class="lk">'; for(var v=1;v<=7;v++) h+='<button type="button" data-v="'+v+'">'+v+'</button>'; h+='</div><div class="anch"><span>'+esc(it.a[0])+'</span><span>'+esc(it.a[1])+'</span></div>'; }
+    else if(it.type==="choice"){ h+='<div class="ch">'; it.opts.forEach(function(o){ h+='<button type="button" data-v="'+esc(o)+'">'+esc(o)+'</button>'; }); h+='</div>'; }
+    else if(it.type==="num") h+='<input type="number" inputmode="numeric" min="10" max="99">';
+    else h+='<input type="text">';
+    h+='</div>'; });
+  h+='<button class="btn" id="go">제출하기</button><div class="msg" id="msg" role="status"></div>';
+  app.innerHTML=h;
+  app.querySelectorAll(".q").forEach(function(q){ var id=q.dataset.q;
+    q.querySelectorAll("button[data-v]").forEach(function(b){ b.addEventListener("click",function(){
+      q.querySelectorAll("button[data-v]").forEach(function(x){x.classList.remove("on");}); b.classList.add("on");
+      ans[id]=isNaN(+b.dataset.v)?b.dataset.v:+b.dataset.v; q.classList.remove("miss"); }); });
+    var t=q.querySelector("input"); if(t) t.addEventListener("input",function(){ var v=t.value.trim(); if(v){ ans[id]=t.type==="number"?+v:v; q.classList.remove("miss"); } else delete ans[id]; }); });
+  document.getElementById("pidIn").addEventListener("input",function(){ document.getElementById("pidBox").classList.remove("miss"); });
+  var go=document.getElementById("go"), msg=document.getElementById("msg");
+  go.addEventListener("click",function(){
+    var pid=cleanPid(document.getElementById("pidIn").value);
+    if(!pid){ document.getElementById("pidBox").classList.add("miss"); window.scrollTo(0,0); msg.className="msg err"; msg.textContent="참가자 번호를 입력해 주세요."; return; }
+    var need=ITEMS.filter(function(it){ return it.id&&!(it.id in ans); });
+    if(need.length){ need.forEach(function(it){ app.querySelector('[data-q="'+it.id+'"]').classList.add("miss"); });
+      app.querySelector('[data-q="'+need[0].id+'"]').scrollIntoView({block:"center",behavior:"smooth"});
+      msg.className="msg err"; msg.textContent="빨간 테두리 문항에 답해 주세요 ("+need.length+"개)."; return; }
+    var pt=[1,2,3,4,5,6].map(function(i){ return i===2?8-ans["pt"+i]:ans["pt"+i]; });
+    var out=Object.assign({},ans,{trustProp:Math.round(pt.reduce(function(a,b){return a+b;},0)/6*100)/100});
+    go.disabled=true; msg.className="msg"; msg.style.display="block"; msg.textContent="저장 중…";
+    fetch("/api/log",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"pre",pid:pid,answers:out})})
+      .then(function(r){ if(!r.ok) throw 0;
+        app.querySelectorAll(".q,.sec,.pid").forEach(function(x){x.style.display="none";}); go.style.display="none";
+        msg.className="msg ok"; msg.textContent="✓ 사전 설문이 저장되었습니다 ("+pid+"). 이제 안내받은 첫 번째 과제 링크로 이동해 주세요."; window.scrollTo(0,0); })
+      .catch(function(){ go.disabled=false; msg.className="msg err"; msg.textContent="저장하지 못했습니다. 인터넷 연결을 확인하고 다시 [제출하기]를 눌러 주세요."; });
+  });
+})();
+</script>
+</body>
+</html>
