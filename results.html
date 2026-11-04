@@ -85,14 +85,14 @@ details.edit summary{cursor:pointer;font-weight:800;font-size:14px;color:var(--n
   /* ───────── 엑셀 만들기: 숫자 코드를 사람이 읽을 수 있는 내용으로 풀어서 기록 ───────── */
   var HEAD=["참가자","순서","링크","조건","시나리오","종목 세트","추천 1위","첫 선택","최종 선택","Agreement(최종=1위)","Switch(첫 선택≠1위→최종=1위)",
     "알아낸 것 정답 수","목표1 문항","목표1 답","목표1 채점","목표2 문항","목표2 답","목표2 채점","목표3 문항","목표3 답","목표3 채점",
-    "조건 입력 시도 횟수","총 소요(초)","질문·설명 요청 수","에이전트 제안","제안 수락","제안 거절","제안 무응답","선택 이유","TLX(평균)","TIA(평균)","저장 시각"];
+    "조건 입력 시도 횟수","총 소요(초)","질문·설명 요청 수","에이전트 제안","제안 수락","제안 거절","제안 무응답","선택 이유","TLX(평균)","TIA(평균)","결정 어려움(1~7)","저장 시각"];
   function goals(t){ var g=[]; t.split("\n").forEach(function(l){ if(/^목표\d/.test(l)){ var c=l.split("\t"); g.push({q:c[0].replace(/^목표\d\s*/,"").replace(/^\(|\)$/g,""),a:c[1]||"",ok:(c[2]||"")}); } }); return g; }
   function num(v){ return (v!==""&&v!=null&&/^-?\d+(\.\d+)?$/.test(String(v)))?+v:v; }
   function rowObj(x){ var t=x.text||"", s=x.survey||{}, g=goals(t), o={};
     var v=[x.pid,x.order,x.link,field(t,"조건"),field(t,"시나리오"),field(t,"종목 세트"),field(t,"추천 1위"),field(t,"첫 선택"),field(t,"최종 선택"),field(t,"Agreement"),field(t,"Switch"),field(t,"알아낸 것 정답 수")];
     for(var i=0;i<3;i++){ var gi=g[i]||{}; v.push(gi.q||"",gi.a||"",gi.ok||""); }
     v.push(field(t,"조건 입력 시도"),field(t,"총 소요"),field(t,"질문·설명 요청 수"),field(t,"에이전트 제안"),field(t,"제안 수락"),field(t,"제안 거절"),field(t,"제안 무응답"),field(t,"선택 이유"),
-      s.tlx==null?"":s.tlx,s.tia==null?"":s.tia,(x.savedAt||"").replace("T"," ").slice(0,19));
+      s.tlx==null?"":s.tlx,s.tia==null?"":s.tia,s.pdiff==null?((s.answers&&s.answers.pdiff)||""):s.pdiff,(x.savedAt||"").replace("T"," ").slice(0,19));
     HEAD.forEach(function(h,i){ o[h]=num(v[i]); }); return o; }
   var CODE={r1:"투자 성향: 안정형",r2:"투자 성향: 안정추구형",r3:"투자 성향: 위험중립형",r4:"투자 성향: 적극투자형",r5:"투자 성향: 공격투자형",
     p1:"투자 기간: 6개월 이내",p2:"투자 기간: 6개월~1년",p3:"투자 기간: 1~3년",p4:"투자 기간: 3년 이상",
@@ -136,6 +136,7 @@ details.edit summary{cursor:pointer;font-weight:800;font-size:14px;color:var(--n
   function surveyRows(list){ var out=[]; list.forEach(function(x){ var a=(x.survey&&x.survey.answers)||{}; if(!x.survey) return;
       TLXQ.forEach(function(q,i){ out.push({"참가자":x.pid,"링크":x.link,"순서":x.order,"척도":"NASA-TLX","번호":i+1,"문항":q[1],"응답":a[q[0]],"응답 의미":a[q[0]]==null?"":a[q[0]]+" / 100","역채점":"","채점값":a[q[0]]}); });
       TIAQ.forEach(function(q,i){ var v=a["tia"+(i+1)], rv=i<5; out.push({"참가자":x.pid,"링크":x.link,"순서":x.order,"척도":"TIA","번호":i+1,"문항":q,"응답":v,"응답 의미":v==null?"":LIK[v],"역채점":rv?"예 (8−응답)":"","채점값":v==null?"":(rv?8-v:v)}); });
+      if(a.pdiff!=null) out.push({"참가자":x.pid,"링크":x.link,"순서":x.order,"척도":"난이도 확인","번호":1,"문항":"종목을 고르는 결정이 어려웠다","응답":a.pdiff,"응답 의미":LIK[a.pdiff],"역채점":"","채점값":a.pdiff});
       out.push({"참가자":x.pid,"링크":x.link,"순서":x.order,"척도":"평균","번호":"","문항":"TLX 평균 (0~100, 높을수록 부담 큼) / TIA 평균 (1~7, 높을수록 신뢰 높음)","응답":"","응답 의미":"TLX "+x.survey.tlx+" · TIA "+x.survey.tia,"역채점":"","채점값":""}); });
     return out; }
   var PREC=[["age","나이"],["gender","성별"],["job","전공·직업"],["invest","주식 투자 경험"],["finapp","금융·증권 앱 사용 빈도"],["aichat","AI 챗봇 사용 빈도"],

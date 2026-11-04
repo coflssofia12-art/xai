@@ -802,7 +802,7 @@ button.cta{border:0;font-family:inherit}
     var INTENTS=[
       ["dividend",["배당"]],
       ["fundamental",["재무","per","pbr","roe","지표","실적","영업이익","이익률","가치"]],
-      ["transparency",["개인정보","내 정보","정보를","정보 사용","데이터","수집","어떻게 사용"]],
+      ["transparency",["개인정보","내 정보","내정보","정보를","정보 사용","데이터","수집","어떻게 사용","사용됐","사용되었","사용된","뭐가 사용","입력한 정보","내가 입력"]],
       ["compare",["비교","다른 종목","비슷","대신","차이","나아"]],
       ["risk",["위험","리스크","변동","손실","안전","떨어"]],
       ["reason",["추천","이유","왜","적합","맞는","맞아","근거"]]
@@ -893,6 +893,7 @@ button.cta{border:0;font-family:inherit}
 "5. 2~4문장, '~입니다/~습니다' 체로 쓰고, 한 문장마다 줄을 바꾸세요. 마크다운·목록 기호·이모지는 쓰지 마세요. 답변 본문만 출력하세요.",
 "6. 용어를 물으면 일반적인 뜻을 한 문장으로 설명한 뒤 이 종목의 수치를 덧붙여도 됩니다.",
 "7. 다른 종목을 물으면 화면에 두 종목의 비교표(3개월 수익·변동성·위험도·PER·배당수익률·조건 매칭)가 함께 표시됩니다. 표의 수치를 나열하지 말고 핵심 차이를 문장으로 설명하세요.",
+"8. 비교해 달라는 요청에 비교할 종목을 말하지 않았으면, 되묻지 말고 지금 보고 있는 종목과 추천 목록의 나머지 두 종목을 [데이터]의 수치(변동성·위험도·PER·배당수익률·조건 매칭)로 바로 비교해 답하세요. 어떤 질문이든 '어느 종목을 말씀하시나요?'처럼 되묻지 말고, 가장 자연스러운 뜻으로 해석해 바로 답하세요.",
 "",
 "[데이터]",
 "<사용자 입력 조건>", userCond(), "",
@@ -1186,6 +1187,9 @@ hist.length?("[이전 대화]\n"+hist.map(function(h){return "사용자: "+h.q+"
       h+='<div class="svy-sec">B. 방금 사용한 AI 추천 시스템에 대해 (1 = 전혀 그렇지 않다, 7 = 매우 그렇다)</div>';
       TIA.forEach(function(t,i){ n++; h+='<div class="svq" data-q="tia'+(i+1)+'"><div class="svq-t"><b>'+n+'.</b> '+t+'</div><div class="svl">';
         for(var v=1;v<=7;v++) h+='<button type="button" data-v="'+v+'">'+v+'</button>'; h+='</div><div class="sva"><span>전혀 그렇지 않다</span><span>매우 그렇다</span></div></div>'; });
+      h+='<div class="svy-sec">C. 방금 결정에 대해 (1 = 전혀 그렇지 않다, 7 = 매우 그렇다)</div>';
+      n++; h+='<div class="svq" data-q="pdiff"><div class="svq-t"><b>'+n+'.</b> 종목을 고르는 결정이 어려웠다</div><div class="svl">';
+      for(var pv=1;pv<=7;pv++) h+='<button type="button" data-v="'+pv+'">'+pv+'</button>'; h+='</div><div class="sva"><span>전혀 그렇지 않다</span><span>매우 그렇다</span></div></div>';   /* 난이도 조작 확인 */
       h+='<button type="button" class="cta" id="svyGo" style="margin-top:6px">설문 제출하고 저장하기</button><div class="sv-st" id="svySt" style="display:none"></div>';
       box.innerHTML=h;
       box.querySelectorAll(".svq").forEach(function(q){ var id=q.dataset.q;
@@ -1200,7 +1204,7 @@ hist.length?("[이전 대화]\n"+hist.map(function(h){return "사용자: "+h.q+"
         if(miss.length){ miss.forEach(function(q){q.classList.add("miss");}); miss[0].scrollIntoView({block:"center",behavior:"smooth"}); show("빨간 테두리 문항에 답해 주세요 ("+miss.length+"개).","warn"); return; }
         var tl=[]; TLX.forEach(function(t){ tl.push(ans[t[0]]); }); var tlx=tl.reduce(function(a,b){return a+b;},0)/tl.length;
         var ti=[]; for(var i=1;i<=12;i++) ti.push(i<=5?8-ans["tia"+i]:ans["tia"+i]); var tia=ti.reduce(function(a,b){return a+b;},0)/ti.length;
-        var survey={answers:ans,tlx:Math.round(tlx*100)/100,tia:Math.round(tia*100)/100};
+        var survey={answers:ans,tlx:Math.round(tlx*100)/100,tia:Math.round(tia*100)/100,pdiff:ans.pdiff};
         go.disabled=true; show("저장 중…");
         var body=JSON.stringify({pid:pid,group:grp,order:ord,link:link,text:$("rsOut").value,survey:survey});
         fetch("/api/log",{method:"POST",headers:{"content-type":"application/json"},body:body}).then(function(r){ if(!r.ok) throw 0;
